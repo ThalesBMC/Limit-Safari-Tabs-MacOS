@@ -1,6 +1,6 @@
 //
 //  AppDelegate.swift
-//  FocusGuard
+//  TabCap
 //
 //  Created by Thales Brederodes Montarroyos Candido on 05/01/26.
 //

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Safari Tab Limit",
+  "name": "Tab Limit for Safari – TabCap",
   "version": "1.0.0",
-  "description": "Limit your tabs to stay focused and avoid multitasking.",
+  "description": "Limit your Safari tabs to stay focused and avoid multitasking.",
   "icons": {
     "16": "images/icon-16.png",
     "48": "images/icon-48.png",

@@ -2,7 +2,7 @@
 // Limits maximum tabs to maintain focus
 // Supports per-window or global (all windows) limit
 
-const MAX_TABS = 2;
+const MAX_TABS = 3;
 
 // Default settings
 const DEFAULT_SETTINGS = {
@@ -11,7 +11,7 @@ const DEFAULT_SETTINGS = {
   globalLimit: false, // false = per window, true = all windows combined
   allowlistEnabled: false,
   allowlist: [],
-  tabLimitLocked: false
+  tabLimitLocked: false,
 };
 
 // Default stats
@@ -23,7 +23,7 @@ const DEFAULT_STATS = {
   blockedTotal: 0,
   lastActiveDate: null,
   lastBlockDate: null,
-  weekStartDate: null
+  weekStartDate: null,
 };
 
 // Map of pending tabs: tabId -> { windowId, timestamp }
@@ -35,7 +35,7 @@ const PENDING_TIMEOUT = 300;
 // Load settings
 async function getSettings() {
   try {
-    const result = await browser.storage.local.get('settings');
+    const result = await browser.storage.local.get("settings");
     return { ...DEFAULT_SETTINGS, ...result.settings };
   } catch (error) {
     return DEFAULT_SETTINGS;
@@ -60,23 +60,23 @@ function getWeekStart() {
 // Load stats
 async function getStats() {
   try {
-    const result = await browser.storage.local.get('stats');
+    const result = await browser.storage.local.get("stats");
     let stats = { ...DEFAULT_STATS, ...result.stats };
-    
+
     const today = new Date().toDateString();
     const weekStart = getWeekStart();
-    
+
     // Reset daily count
     if (stats.lastBlockDate !== today) {
       stats.blockedToday = 0;
     }
-    
+
     // Reset weekly count if new week
     if (stats.weekStartDate !== weekStart) {
       stats.blockedWeek = 0;
       stats.weekStartDate = weekStart;
     }
-    
+
     stats = updateStreak(stats);
     return stats;
   } catch (error) {
@@ -93,7 +93,7 @@ async function saveStats(stats) {
 function updateStreak(stats) {
   const today = new Date().toDateString();
   const yesterday = new Date(Date.now() - 86400000).toDateString();
-  
+
   if (!stats.lastActiveDate) {
     stats.currentStreak = 1;
     stats.lastActiveDate = today;
@@ -106,11 +106,11 @@ function updateStreak(stats) {
     stats.currentStreak = 1;
     stats.lastActiveDate = today;
   }
-  
+
   if (stats.currentStreak > stats.bestStreak) {
     stats.bestStreak = stats.currentStreak;
   }
-  
+
   return stats;
 }
 
@@ -118,13 +118,13 @@ function updateStreak(stats) {
 async function incrementBlocked() {
   let stats = await getStats();
   const today = new Date().toDateString();
-  
+
   stats.blockedToday++;
   stats.blockedWeek++;
   stats.blockedTotal++;
   stats.lastBlockDate = today;
   stats = updateStreak(stats);
-  
+
   await saveStats(stats);
   return stats;
 }
@@ -153,14 +153,14 @@ async function getCurrentTabCount(windowId, settings) {
 // Check if URL is in allowlist
 function isUrlAllowed(url, allowlist) {
   if (!url || !allowlist || allowlist.length === 0) return false;
-  
+
   try {
     const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
-    
-    return allowlist.some(domain => {
-      const cleanDomain = domain.toLowerCase().replace(/^www\./, '');
-      return hostname === cleanDomain || hostname.endsWith('.' + cleanDomain);
+    const hostname = urlObj.hostname.toLowerCase().replace(/^www\./, "");
+
+    return allowlist.some((domain) => {
+      const cleanDomain = domain.toLowerCase().replace(/^www\./, "");
+      return hostname === cleanDomain || hostname.endsWith("." + cleanDomain);
     });
   } catch {
     return false;
@@ -169,11 +169,11 @@ function isUrlAllowed(url, allowlist) {
 
 // Check if URL is real (not blank/special)
 function isRealUrl(url) {
-  if (!url || url === '') return false;
-  if (url === 'about:blank' || url === 'about:newtab') return false;
-  if (url.startsWith('safari-resource:')) return false;
-  if (url.startsWith('favorites://')) return false;
-  return url.startsWith('http://') || url.startsWith('https://');
+  if (!url || url === "") return false;
+  if (url === "about:blank" || url === "about:newtab") return false;
+  if (url.startsWith("safari-resource:")) return false;
+  if (url.startsWith("favorites://")) return false;
+  return url.startsWith("http://") || url.startsWith("https://");
 }
 
 // Close tab
@@ -182,9 +182,9 @@ async function closeTab(tabId) {
     pendingTabs.delete(tabId);
     await browser.tabs.remove(tabId);
     await incrementBlocked();
-    console.log(`TabLimit: Tab ${tabId} closed`);
+    console.log(`TabCap: Tab ${tabId} closed`);
   } catch (error) {
-    console.error('TabLimit: Error closing tab:', error);
+    console.error("TabCap: Error closing tab:", error);
   }
 }
 
@@ -192,30 +192,37 @@ async function closeTab(tabId) {
 async function checkPendingTab(tabId) {
   const pending = pendingTabs.get(tabId);
   if (!pending) return;
-  
+
   if (Date.now() - pending.timestamp < PENDING_TIMEOUT) return;
-  
+
   pendingTabs.delete(tabId);
-  
+
   const settings = await getSettings();
   if (!settings.enabled) return;
-  
+
   try {
     const tab = await browser.tabs.get(tabId);
     const tabCount = await getCurrentTabCount(tab.windowId, settings);
-    
+
     if (tabCount <= settings.maxTabs) return;
-    
+
     // Check allowlist if URL is available
-    if (isRealUrl(tab.url) && settings.allowlistEnabled && isUrlAllowed(tab.url, settings.allowlist)) {
-      console.log(`TabLimit: Tab in allowlist, keeping`);
+    if (
+      isRealUrl(tab.url) &&
+      settings.allowlistEnabled &&
+      isUrlAllowed(tab.url, settings.allowlist)
+    ) {
+      console.log(`TabCap: Tab in allowlist, keeping`);
       return;
     }
-    
+
     // Close the tab
-    console.log(`TabLimit: Pending timeout, closing tab (${settings.globalLimit ? 'global' : 'per-window'} limit)`);
+    console.log(
+      `TabCap: Pending timeout, closing tab (${
+        settings.globalLimit ? "global" : "per-window"
+      } limit)`
+    );
     await closeTab(tabId);
-    
   } catch (error) {
     // Tab doesn't exist
   }
@@ -225,37 +232,44 @@ async function checkPendingTab(tabId) {
 async function handleTabCreated(tab) {
   const settings = await getSettings();
   if (!settings.enabled) return;
-  
+
   const tabCount = await getCurrentTabCount(tab.windowId, settings);
-  const limitType = settings.globalLimit ? 'global' : 'window';
-  
-  console.log(`TabLimit: Tab created. Count: ${tabCount}/${settings.maxTabs} (${limitType})`);
-  
+  const limitType = settings.globalLimit ? "global" : "window";
+
+  console.log(
+    `TabCap: Tab created. Count: ${tabCount}/${settings.maxTabs} (${limitType})`
+  );
+
   // Broadcast count update
-  browser.runtime.sendMessage({ type: 'TAB_COUNT_UPDATED', count: tabCount }).catch(() => {});
-  
+  browser.runtime
+    .sendMessage({ type: "TAB_COUNT_UPDATED", count: tabCount })
+    .catch(() => {});
+
   if (tabCount <= settings.maxTabs) return;
-  
+
   // If URL is available, check allowlist
   if (isRealUrl(tab.url)) {
-    if (settings.allowlistEnabled && isUrlAllowed(tab.url, settings.allowlist)) {
-      console.log(`TabLimit: Tab in allowlist, keeping`);
+    if (
+      settings.allowlistEnabled &&
+      isUrlAllowed(tab.url, settings.allowlist)
+    ) {
+      console.log(`TabCap: Tab in allowlist, keeping`);
       return;
     }
-    
+
     // Close immediately
-    console.log(`TabLimit: Closing excess tab`);
+    console.log(`TabCap: Closing excess tab`);
     await closeTab(tab.id);
     return;
   }
-  
+
   // No URL yet - mark as pending
-  console.log(`TabLimit: Tab pending URL check`);
+  console.log(`TabCap: Tab pending URL check`);
   pendingTabs.set(tab.id, {
     windowId: tab.windowId,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
-  
+
   setTimeout(() => checkPendingTab(tab.id), PENDING_TIMEOUT + 50);
 }
 
@@ -264,30 +278,33 @@ async function handleTabUpdated(tabId, changeInfo, tab) {
   if (!changeInfo.url) return;
   if (!pendingTabs.has(tabId)) return;
   if (!isRealUrl(changeInfo.url)) return;
-  
+
   pendingTabs.delete(tabId);
-  
+
   const settings = await getSettings();
   if (!settings.enabled) return;
-  
+
   const tabCount = await getCurrentTabCount(tab.windowId, settings);
   if (tabCount <= settings.maxTabs) return;
-  
+
   // Check allowlist
-  if (settings.allowlistEnabled && isUrlAllowed(changeInfo.url, settings.allowlist)) {
-    console.log(`TabLimit: Tab URL in allowlist, keeping`);
+  if (
+    settings.allowlistEnabled &&
+    isUrlAllowed(changeInfo.url, settings.allowlist)
+  ) {
+    console.log(`TabCap: Tab URL in allowlist, keeping`);
     return;
   }
-  
+
   // Close the tab
-  console.log(`TabLimit: Closing tab, not in allowlist`);
+  console.log(`TabCap: Closing tab, not in allowlist`);
   await closeTab(tabId);
 }
 
 // Handler: Tab removed
 async function handleTabRemoved(tabId) {
   pendingTabs.delete(tabId);
-  
+
   // Small delay to let Safari finish updating
   setTimeout(() => broadcastTabCount(), 100);
 }
@@ -297,7 +314,9 @@ async function handleTabActivated(activeInfo) {
   try {
     const settings = await getSettings();
     const count = await getCurrentTabCount(activeInfo.windowId, settings);
-    browser.runtime.sendMessage({ type: 'TAB_COUNT_UPDATED', count }).catch(() => {});
+    browser.runtime
+      .sendMessage({ type: "TAB_COUNT_UPDATED", count })
+      .catch(() => {});
   } catch {}
 }
 
@@ -320,10 +339,15 @@ async function handleTabDetached(tabId, detachInfo) {
 async function broadcastTabCount() {
   try {
     const settings = await getSettings();
-    const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+    const [activeTab] = await browser.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
     if (activeTab) {
       const count = await getCurrentTabCount(activeTab.windowId, settings);
-      browser.runtime.sendMessage({ type: 'TAB_COUNT_UPDATED', count }).catch(() => {});
+      browser.runtime
+        .sendMessage({ type: "TAB_COUNT_UPDATED", count })
+        .catch(() => {});
     }
   } catch {}
 }
@@ -331,27 +355,30 @@ async function broadcastTabCount() {
 // Message listener
 browser.runtime.onMessage.addListener(async (message) => {
   switch (message.type) {
-    case 'GET_SETTINGS':
+    case "GET_SETTINGS":
       return await getSettings();
-    
-    case 'SAVE_SETTINGS':
+
+    case "SAVE_SETTINGS":
       await saveSettings(message.settings);
       return { success: true };
-    
-    case 'GET_STATS':
+
+    case "GET_STATS":
       return await getStats();
-    
-    case 'GET_TAB_COUNT':
+
+    case "GET_TAB_COUNT":
       try {
         const settings = await getSettings();
-        const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+        const [activeTab] = await browser.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
         if (activeTab) {
           const count = await getCurrentTabCount(activeTab.windowId, settings);
           return { count };
         }
       } catch {}
       return { count: 0 };
-    
+
     default:
       return null;
   }
@@ -366,9 +393,74 @@ browser.tabs.onMoved.addListener(handleTabMoved);
 browser.tabs.onAttached.addListener(handleTabAttached);
 browser.tabs.onDetached.addListener(handleTabDetached);
 
+// Periodic consistency check - ensures count is always correct
+async function periodicCheck() {
+  try {
+    const settings = await getSettings();
+    if (!settings.enabled) return;
+
+    // Get current window's tabs
+    const [activeTab] = await browser.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!activeTab) return;
+
+    const currentCount = await getCurrentTabCount(activeTab.windowId, settings);
+
+    // Always broadcast the correct count
+    browser.runtime
+      .sendMessage({ type: "TAB_COUNT_UPDATED", count: currentCount })
+      .catch(() => {});
+
+    // If over limit, find and close excess tabs
+    if (currentCount > settings.maxTabs) {
+      console.log(
+        `TabCap: Periodic check found ${currentCount}/${settings.maxTabs} tabs - cleaning up`
+      );
+
+      // Get tabs to evaluate
+      const tabs = settings.globalLimit
+        ? await browser.tabs.query({})
+        : await browser.tabs.query({ windowId: activeTab.windowId });
+
+      // Sort by id descending (newest first)
+      tabs.sort((a, b) => b.id - a.id);
+
+      let tabsToClose = currentCount - settings.maxTabs;
+
+      for (const tab of tabs) {
+        if (tabsToClose <= 0) break;
+
+        // Skip active tab
+        if (tab.active) continue;
+
+        // Skip allowlisted tabs
+        if (
+          settings.allowlistEnabled &&
+          isRealUrl(tab.url) &&
+          isUrlAllowed(tab.url, settings.allowlist)
+        ) {
+          continue;
+        }
+
+        // Close this tab
+        console.log(`TabCap: Periodic cleanup closing tab ${tab.id}`);
+        await closeTab(tab.id);
+        tabsToClose--;
+      }
+    }
+  } catch (error) {
+    console.error("TabCap: Periodic check error:", error);
+  }
+}
+
 // Initialize
 (async () => {
   const stats = await getStats();
   await saveStats(stats);
-  console.log('TabLimit: Initialized - Auto-close mode');
+  console.log("TabCap: Initialized - Auto-close mode");
+
+  // Start periodic consistency check every 2 seconds
+  setInterval(periodicCheck, 2000);
 })();

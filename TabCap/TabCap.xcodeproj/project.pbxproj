@@ -15,7 +15,7 @@
 		FF4B72392F0B3AEF000C15B7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF4B72382F0B3AEF000C15B7 /* ViewController.swift */; };
 		FF4B723C2F0B3AEF000C15B7 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = FF4B723A2F0B3AEF000C15B7 /* Main.storyboard */; };
 		FF4B723E2F0B3AF0000C15B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FF4B723D2F0B3AF0000C15B7 /* Assets.xcassets */; };
-		FF4B72452F0B3AF0000C15B7 /* FocusGuard Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FF4B72442F0B3AF0000C15B7 /* FocusGuard Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FF4B72452F0B3AF0000C15B7 /* TabCap Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FF4B72442F0B3AF0000C15B7 /* TabCap Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FF4B724A2F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF4B72492F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift */; };
 		FF4B725F2F0B3AF1000C15B7 /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72562F0B3AF1000C15B7 /* popup.js */; };
 		FF4B72602F0B3AF1000C15B7 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72572F0B3AF1000C15B7 /* background.js */; };
@@ -31,7 +31,7 @@
 			containerPortal = FF4B72212F0B3AEF000C15B7 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = FF4B72432F0B3AF0000C15B7;
-			remoteInfo = "FocusGuard Extension";
+			remoteInfo = "TabCap Extension";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -42,7 +42,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				FF4B72452F0B3AF0000C15B7 /* FocusGuard Extension.appex in Embed Foundation Extensions */,
+				FF4B72452F0B3AF0000C15B7 /* TabCap Extension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -50,7 +50,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		FF4B72292F0B3AEF000C15B7 /* FocusGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF4B72292F0B3AEF000C15B7 /* TabCap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TabCap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF4B722C2F0B3AEF000C15B7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		FF4B72302F0B3AEF000C15B7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
 		FF4B72322F0B3AEF000C15B7 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
@@ -60,15 +60,15 @@
 		FF4B723B2F0B3AEF000C15B7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		FF4B723D2F0B3AF0000C15B7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FF4B723F2F0B3AF0000C15B7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		FF4B72442F0B3AF0000C15B7 /* FocusGuard Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "FocusGuard Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF4B72442F0B3AF0000C15B7 /* TabCap Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "TabCap Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		FF4B72492F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
 		FF4B724B2F0B3AF0000C15B7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		FF4B72562F0B3AF1000C15B7 /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = popup.js; path = "../../FocusGuard Extension/popup.js"; sourceTree = "<group>"; };
-		FF4B72572F0B3AF1000C15B7 /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = "../../FocusGuard Extension/background.js"; sourceTree = "<group>"; };
-		FF4B72582F0B3AF1000C15B7 /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = images; path = "../../FocusGuard Extension/images"; sourceTree = "<group>"; };
-		FF4B72592F0B3AF1000C15B7 /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = popup.html; path = "../../FocusGuard Extension/popup.html"; sourceTree = "<group>"; };
-		FF4B725B2F0B3AF1000C15B7 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = "../../FocusGuard Extension/manifest.json"; sourceTree = "<group>"; };
-		FF4B725C2F0B3AF1000C15B7 /* popup.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; name = popup.css; path = "../../FocusGuard Extension/popup.css"; sourceTree = "<group>"; };
+		FF4B72562F0B3AF1000C15B7 /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = popup.js; path = "../../TabCap Extension/popup.js"; sourceTree = "<group>"; };
+		FF4B72572F0B3AF1000C15B7 /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = "../../TabCap Extension/background.js"; sourceTree = "<group>"; };
+		FF4B72582F0B3AF1000C15B7 /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = images; path = "../../TabCap Extension/images"; sourceTree = "<group>"; };
+		FF4B72592F0B3AF1000C15B7 /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = popup.html; path = "../../TabCap Extension/popup.html"; sourceTree = "<group>"; };
+		FF4B725B2F0B3AF1000C15B7 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = "../../TabCap Extension/manifest.json"; sourceTree = "<group>"; };
+		FF4B725C2F0B3AF1000C15B7 /* popup.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; name = popup.css; path = "../../TabCap Extension/popup.css"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,8 +92,8 @@
 		FF4B72202F0B3AEF000C15B7 = {
 			isa = PBXGroup;
 			children = (
-				FF4B722B2F0B3AEF000C15B7 /* FocusGuard */,
-				FF4B72482F0B3AF0000C15B7 /* FocusGuard Extension */,
+				FF4B722B2F0B3AEF000C15B7 /* TabCap */,
+				FF4B72482F0B3AF0000C15B7 /* TabCap Extension */,
 				FF4B722A2F0B3AEF000C15B7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -101,13 +101,13 @@
 		FF4B722A2F0B3AEF000C15B7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				FF4B72292F0B3AEF000C15B7 /* FocusGuard.app */,
-				FF4B72442F0B3AF0000C15B7 /* FocusGuard Extension.appex */,
+				FF4B72292F0B3AEF000C15B7 /* TabCap.app */,
+				FF4B72442F0B3AF0000C15B7 /* TabCap Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		FF4B722B2F0B3AEF000C15B7 /* FocusGuard */ = {
+		FF4B722B2F0B3AEF000C15B7 /* TabCap */ = {
 			isa = PBXGroup;
 			children = (
 				FF4B722C2F0B3AEF000C15B7 /* AppDelegate.swift */,
@@ -117,7 +117,7 @@
 				FF4B723F2F0B3AF0000C15B7 /* Info.plist */,
 				FF4B722E2F0B3AEF000C15B7 /* Resources */,
 			);
-			path = FocusGuard;
+			path = TabCap;
 			sourceTree = "<group>";
 		};
 		FF4B722E2F0B3AEF000C15B7 /* Resources */ = {
@@ -131,14 +131,14 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		FF4B72482F0B3AF0000C15B7 /* FocusGuard Extension */ = {
+		FF4B72482F0B3AF0000C15B7 /* TabCap Extension */ = {
 			isa = PBXGroup;
 			children = (
 				FF4B72552F0B3AF1000C15B7 /* Resources */,
 				FF4B72492F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift */,
 				FF4B724B2F0B3AF0000C15B7 /* Info.plist */,
 			);
-			path = "FocusGuard Extension";
+			path = "TabCap Extension";
 			sourceTree = "<group>";
 		};
 		FF4B72552F0B3AF1000C15B7 /* Resources */ = {
@@ -152,15 +152,15 @@
 				FF4B725C2F0B3AF1000C15B7 /* popup.css */,
 			);
 			name = Resources;
-			path = "FocusGuard Extension";
+			path = "TabCap Extension";
 			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		FF4B72282F0B3AEF000C15B7 /* FocusGuard */ = {
+		FF4B72282F0B3AEF000C15B7 /* TabCap */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = FF4B72522F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "FocusGuard" */;
+			buildConfigurationList = FF4B72522F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "TabCap" */;
 			buildPhases = (
 				FF4B72252F0B3AEF000C15B7 /* Sources */,
 				FF4B72262F0B3AEF000C15B7 /* Frameworks */,
@@ -172,16 +172,16 @@
 			dependencies = (
 				FF4B72472F0B3AF0000C15B7 /* PBXTargetDependency */,
 			);
-			name = FocusGuard;
+			name = TabCap;
 			packageProductDependencies = (
 			);
-			productName = FocusGuard;
-			productReference = FF4B72292F0B3AEF000C15B7 /* FocusGuard.app */;
+			productName = TabCap;
+			productReference = FF4B72292F0B3AEF000C15B7 /* TabCap.app */;
 			productType = "com.apple.product-type.application";
 		};
-		FF4B72432F0B3AF0000C15B7 /* FocusGuard Extension */ = {
+		FF4B72432F0B3AF0000C15B7 /* TabCap Extension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = FF4B724E2F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "FocusGuard Extension" */;
+			buildConfigurationList = FF4B724E2F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "TabCap Extension" */;
 			buildPhases = (
 				FF4B72402F0B3AF0000C15B7 /* Sources */,
 				FF4B72412F0B3AF0000C15B7 /* Frameworks */,
@@ -191,11 +191,11 @@
 			);
 			dependencies = (
 			);
-			name = "FocusGuard Extension";
+			name = "TabCap Extension";
 			packageProductDependencies = (
 			);
-			productName = "FocusGuard Extension";
-			productReference = FF4B72442F0B3AF0000C15B7 /* FocusGuard Extension.appex */;
+			productName = "TabCap Extension";
+			productReference = FF4B72442F0B3AF0000C15B7 /* TabCap Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -216,7 +216,7 @@
 					};
 				};
 			};
-			buildConfigurationList = FF4B72242F0B3AEF000C15B7 /* Build configuration list for PBXProject "FocusGuard" */;
+			buildConfigurationList = FF4B72242F0B3AEF000C15B7 /* Build configuration list for PBXProject "TabCap" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -230,8 +230,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				FF4B72282F0B3AEF000C15B7 /* FocusGuard */,
-				FF4B72432F0B3AF0000C15B7 /* FocusGuard Extension */,
+				FF4B72282F0B3AEF000C15B7 /* TabCap */,
+				FF4B72432F0B3AF0000C15B7 /* TabCap Extension */,
 			);
 		};
 /* End PBXProject section */
@@ -288,7 +288,7 @@
 /* Begin PBXTargetDependency section */
 		FF4B72472F0B3AF0000C15B7 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = FF4B72432F0B3AF0000C15B7 /* FocusGuard Extension */;
+			target = FF4B72432F0B3AF0000C15B7 /* TabCap Extension */;
 			targetProxy = FF4B72462F0B3AF0000C15B7 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -436,12 +436,13 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7QX6PLCF2C;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "FocusGuard Extension/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "FocusGuard Extension";
+				INFOPLIST_FILE = "TabCap Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "TabCap Extension";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -454,7 +455,7 @@
 					"-framework",
 					SafariServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.focusguard.FocusGuard.Extension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thales.tabcap.Extension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -470,12 +471,13 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7QX6PLCF2C;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "FocusGuard Extension/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "FocusGuard Extension";
+				INFOPLIST_FILE = "TabCap Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "TabCap Extension";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -488,7 +490,7 @@
 					"-framework",
 					SafariServices,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.focusguard.FocusGuard.Extension;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thales.tabcap.Extension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -507,13 +509,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7QX6PLCF2C;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FocusGuard/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FocusGuard;
+				INFOPLIST_FILE = TabCap/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TabCap;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -528,7 +531,7 @@
 					"-framework",
 					WebKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.focusguard.FocusGuard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thales.tabcap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -548,13 +551,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7QX6PLCF2C;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FocusGuard/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = FocusGuard;
+				INFOPLIST_FILE = TabCap/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TabCap;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMainStoryboardFile = Main;
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -569,7 +573,7 @@
 					"-framework",
 					WebKit,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.focusguard.FocusGuard;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thales.tabcap;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -584,7 +588,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		FF4B72242F0B3AEF000C15B7 /* Build configuration list for PBXProject "FocusGuard" */ = {
+		FF4B72242F0B3AEF000C15B7 /* Build configuration list for PBXProject "TabCap" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				FF4B724C2F0B3AF0000C15B7 /* Debug */,
@@ -593,7 +597,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		FF4B724E2F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "FocusGuard Extension" */ = {
+		FF4B724E2F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "TabCap Extension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				FF4B724F2F0B3AF0000C15B7 /* Debug */,
@@ -602,7 +606,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		FF4B72522F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "FocusGuard" */ = {
+		FF4B72522F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "TabCap" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				FF4B72532F0B3AF0000C15B7 /* Debug */,

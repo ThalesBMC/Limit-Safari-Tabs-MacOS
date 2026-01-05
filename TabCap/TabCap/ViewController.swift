@@ -1,6 +1,6 @@
 //
 //  ViewController.swift
-//  FocusGuard
+//  TabCap
 //
 //  Created by Thales Brederodes Montarroyos Candido on 05/01/26.
 //
@@ -9,7 +9,7 @@ import Cocoa
 import SafariServices
 import WebKit
 
-let extensionBundleIdentifier = "com.focusguard.FocusGuard.Extension"
+let extensionBundleIdentifier = "com.TabCap.TabCap.Extension"
 
 class ViewController: NSViewController, WKNavigationDelegate, WKScriptMessageHandler {
 

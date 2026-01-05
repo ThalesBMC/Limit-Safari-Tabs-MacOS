@@ -1,6 +1,6 @@
 //
 //  SafariWebExtensionHandler.swift
-//  FocusGuard Extension
+//  TabCap Extension
 //
 //  Created by Thales Brederodes Montarroyos Candido on 05/01/26.
 //
