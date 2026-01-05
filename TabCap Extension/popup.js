@@ -395,7 +395,7 @@ function setupEventListeners() {
   if (elements.increaseBtn) {
     elements.increaseBtn.addEventListener("click", async () => {
       if (settings.tabLimitLocked) return;
-      if (settings.maxTabs < 10) {
+      if (settings.maxTabs < 99) {
         settings.maxTabs++;
         await saveSettings();
         updateUI();
