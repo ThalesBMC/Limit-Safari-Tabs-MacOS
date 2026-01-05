@@ -39,40 +39,6 @@ const FRICTION_PHRASES = [
   "I am training my brain to quit",
 ];
 
-// Stats messages
-const STATS_MESSAGES = [
-  "Keep going! Every tab you don't open is a win.",
-  "Your focus is your superpower. Protect it.",
-  "Small wins compound into massive results.",
-  "Deep work beats shallow work, every time.",
-  "You're building the muscle of focus.",
-  "Consistency beats intensity. Keep showing up.",
-  "One thing at a time. That's the secret.",
-  "Distractions avoided = progress made.",
-  "Your future self will thank you.",
-  "Stay the course. You've got this.",
-  "The best minds obsess over less.",
-  "Less tabs, more impact.",
-  "Elite performers eliminate distractions.",
-  "Your attention is your most valuable asset.",
-  "Clarity comes from constraint.",
-  "Champions don't multitask.",
-  "Fewer tabs = Sharper mind.",
-  "You're not missing out. You're going deep.",
-  "This is how winners operate.",
-  "Discipline today, freedom tomorrow.",
-  "Your brain thanks you for this.",
-  "Tab by tab, you're becoming unstoppable.",
-  "Focus is the new IQ.",
-  "Simplicity is the ultimate sophistication.",
-  "The focused few outperform the scattered many.",
-  "You're playing the long game. Respect.",
-  "This is what intentional living looks like.",
-  "Your concentration is your competitive edge.",
-  "Great work requires great focus.",
-  "The noise can wait. Your goals can't.",
-];
-
 // State
 let settings = {
   enabled: true,
@@ -131,7 +97,6 @@ function initElements() {
     blockedToday: document.getElementById("blockedToday"),
     blockedWeek: document.getElementById("blockedWeek"),
     blockedTotal: document.getElementById("blockedTotal"),
-    statsMessage: document.getElementById("statsMessage"),
     frictionModal: document.getElementById("frictionModal"),
     modalTitle: document.getElementById("modalTitle"),
     modalMessage: document.getElementById("modalMessage"),
@@ -230,8 +195,6 @@ function updateUI() {
     elements.blockedWeek.textContent = stats.blockedWeek;
   if (elements.blockedTotal)
     elements.blockedTotal.textContent = stats.blockedTotal;
-  if (elements.statsMessage)
-    elements.statsMessage.textContent = getRandomItem(STATS_MESSAGES);
 }
 
 function updateLockUI() {
