@@ -1,4 +1,4 @@
-// FocusGuard - Safari Extension Background Script
+// Safari Tab Limit - Extension Background Script
 // Limits maximum tabs to maintain focus
 // Supports per-window or global (all windows) limit
 
@@ -19,9 +19,11 @@ const DEFAULT_STATS = {
   currentStreak: 0,
   bestStreak: 0,
   blockedToday: 0,
+  blockedWeek: 0,
   blockedTotal: 0,
   lastActiveDate: null,
-  lastBlockDate: null
+  lastBlockDate: null,
+  weekStartDate: null
 };
 
 // Map of pending tabs: tabId -> { windowId, timestamp }
@@ -45,6 +47,16 @@ async function saveSettings(settings) {
   await browser.storage.local.set({ settings });
 }
 
+// Get start of current week (Sunday)
+function getWeekStart() {
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 = Sunday
+  const diff = now.getDate() - dayOfWeek;
+  const weekStart = new Date(now.setDate(diff));
+  weekStart.setHours(0, 0, 0, 0);
+  return weekStart.toDateString();
+}
+
 // Load stats
 async function getStats() {
   try {
@@ -52,8 +64,17 @@ async function getStats() {
     let stats = { ...DEFAULT_STATS, ...result.stats };
     
     const today = new Date().toDateString();
+    const weekStart = getWeekStart();
+    
+    // Reset daily count
     if (stats.lastBlockDate !== today) {
       stats.blockedToday = 0;
+    }
+    
+    // Reset weekly count if new week
+    if (stats.weekStartDate !== weekStart) {
+      stats.blockedWeek = 0;
+      stats.weekStartDate = weekStart;
     }
     
     stats = updateStreak(stats);
@@ -99,6 +120,7 @@ async function incrementBlocked() {
   const today = new Date().toDateString();
   
   stats.blockedToday++;
+  stats.blockedWeek++;
   stats.blockedTotal++;
   stats.lastBlockDate = today;
   stats = updateStreak(stats);
@@ -160,9 +182,9 @@ async function closeTab(tabId) {
     pendingTabs.delete(tabId);
     await browser.tabs.remove(tabId);
     await incrementBlocked();
-    console.log(`FocusGuard: Tab ${tabId} closed`);
+    console.log(`TabLimit: Tab ${tabId} closed`);
   } catch (error) {
-    console.error('FocusGuard: Error closing tab:', error);
+    console.error('TabLimit: Error closing tab:', error);
   }
 }
 
@@ -186,12 +208,12 @@ async function checkPendingTab(tabId) {
     
     // Check allowlist if URL is available
     if (isRealUrl(tab.url) && settings.allowlistEnabled && isUrlAllowed(tab.url, settings.allowlist)) {
-      console.log(`FocusGuard: Tab in allowlist, keeping`);
+      console.log(`TabLimit: Tab in allowlist, keeping`);
       return;
     }
     
     // Close the tab
-    console.log(`FocusGuard: Pending timeout, closing tab (${settings.globalLimit ? 'global' : 'per-window'} limit)`);
+    console.log(`TabLimit: Pending timeout, closing tab (${settings.globalLimit ? 'global' : 'per-window'} limit)`);
     await closeTab(tabId);
     
   } catch (error) {
@@ -207,25 +229,28 @@ async function handleTabCreated(tab) {
   const tabCount = await getCurrentTabCount(tab.windowId, settings);
   const limitType = settings.globalLimit ? 'global' : 'window';
   
-  console.log(`FocusGuard: Tab created. Count: ${tabCount}/${settings.maxTabs} (${limitType})`);
+  console.log(`TabLimit: Tab created. Count: ${tabCount}/${settings.maxTabs} (${limitType})`);
+  
+  // Broadcast count update
+  browser.runtime.sendMessage({ type: 'TAB_COUNT_UPDATED', count: tabCount }).catch(() => {});
   
   if (tabCount <= settings.maxTabs) return;
   
   // If URL is available, check allowlist
   if (isRealUrl(tab.url)) {
     if (settings.allowlistEnabled && isUrlAllowed(tab.url, settings.allowlist)) {
-      console.log(`FocusGuard: Tab in allowlist, keeping`);
+      console.log(`TabLimit: Tab in allowlist, keeping`);
       return;
     }
     
     // Close immediately
-    console.log(`FocusGuard: Closing excess tab`);
+    console.log(`TabLimit: Closing excess tab`);
     await closeTab(tab.id);
     return;
   }
   
   // No URL yet - mark as pending
-  console.log(`FocusGuard: Tab pending URL check`);
+  console.log(`TabLimit: Tab pending URL check`);
   pendingTabs.set(tab.id, {
     windowId: tab.windowId,
     timestamp: Date.now()
@@ -250,18 +275,57 @@ async function handleTabUpdated(tabId, changeInfo, tab) {
   
   // Check allowlist
   if (settings.allowlistEnabled && isUrlAllowed(changeInfo.url, settings.allowlist)) {
-    console.log(`FocusGuard: Tab URL in allowlist, keeping`);
+    console.log(`TabLimit: Tab URL in allowlist, keeping`);
     return;
   }
   
   // Close the tab
-  console.log(`FocusGuard: Closing tab, not in allowlist`);
+  console.log(`TabLimit: Closing tab, not in allowlist`);
   await closeTab(tabId);
 }
 
 // Handler: Tab removed
-function handleTabRemoved(tabId) {
+async function handleTabRemoved(tabId) {
   pendingTabs.delete(tabId);
+  
+  // Small delay to let Safari finish updating
+  setTimeout(() => broadcastTabCount(), 100);
+}
+
+// Handler: Tab activated (window/tab group changed)
+async function handleTabActivated(activeInfo) {
+  try {
+    const settings = await getSettings();
+    const count = await getCurrentTabCount(activeInfo.windowId, settings);
+    browser.runtime.sendMessage({ type: 'TAB_COUNT_UPDATED', count }).catch(() => {});
+  } catch {}
+}
+
+// Handler: Tab moved (reordered or moved between groups)
+async function handleTabMoved(tabId, moveInfo) {
+  await broadcastTabCount();
+}
+
+// Handler: Tab attached to window (moved from another window/group)
+async function handleTabAttached(tabId, attachInfo) {
+  await broadcastTabCount();
+}
+
+// Handler: Tab detached from window (moving to another window/group)
+async function handleTabDetached(tabId, detachInfo) {
+  await broadcastTabCount();
+}
+
+// Broadcast current tab count to popup
+async function broadcastTabCount() {
+  try {
+    const settings = await getSettings();
+    const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
+    if (activeTab) {
+      const count = await getCurrentTabCount(activeTab.windowId, settings);
+      browser.runtime.sendMessage({ type: 'TAB_COUNT_UPDATED', count }).catch(() => {});
+    }
+  } catch {}
 }
 
 // Message listener
@@ -297,10 +361,14 @@ browser.runtime.onMessage.addListener(async (message) => {
 browser.tabs.onCreated.addListener(handleTabCreated);
 browser.tabs.onUpdated.addListener(handleTabUpdated);
 browser.tabs.onRemoved.addListener(handleTabRemoved);
+browser.tabs.onActivated.addListener(handleTabActivated);
+browser.tabs.onMoved.addListener(handleTabMoved);
+browser.tabs.onAttached.addListener(handleTabAttached);
+browser.tabs.onDetached.addListener(handleTabDetached);
 
 // Initialize
 (async () => {
   const stats = await getStats();
   await saveStats(stats);
-  console.log('FocusGuard: Initialized - Auto-close mode');
+  console.log('TabLimit: Initialized - Auto-close mode');
 })();

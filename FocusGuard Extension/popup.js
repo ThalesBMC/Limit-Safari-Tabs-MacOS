@@ -1,4 +1,4 @@
-// FocusGuard - Popup Script
+// Safari Tab Limit - Popup Script
 
 // Friction phrases
 const FRICTION_PHRASES = [
@@ -51,7 +51,9 @@ let settings = {
 let stats = {
   currentStreak: 0,
   bestStreak: 0,
-  blockedToday: 0
+  blockedToday: 0,
+  blockedWeek: 0,
+  blockedTotal: 0
 };
 
 // DOM Elements
@@ -85,9 +87,15 @@ function initElements() {
     allowlistInput: document.getElementById('allowlistInput'),
     addDomainBtn: document.getElementById('addDomainBtn'),
     domainsList: document.getElementById('domainsList'),
+    settingsContainer: document.getElementById('settingsContainer'),
+    activeState: document.getElementById('activeState'),
+    inactiveState: document.getElementById('inactiveState'),
+    enableBtn: document.getElementById('enableBtn'),
     currentStreak: document.getElementById('currentStreak'),
     bestStreak: document.getElementById('bestStreak'),
     blockedToday: document.getElementById('blockedToday'),
+    blockedWeek: document.getElementById('blockedWeek'),
+    blockedTotal: document.getElementById('blockedTotal'),
     statsMessage: document.getElementById('statsMessage'),
     frictionModal: document.getElementById('frictionModal'),
     modalTitle: document.getElementById('modalTitle'),
@@ -132,16 +140,20 @@ async function updateTabCount() {
   } catch {}
 }
 
+// Listen for real-time tab count updates from background
+browser.runtime.onMessage.addListener((message) => {
+  if (message.type === 'TAB_COUNT_UPDATED' && elements.currentTabsSpan) {
+    elements.currentTabsSpan.textContent = message.count;
+  }
+});
+
 function updateUI() {
-  // Status card
-  if (elements.statusCard) {
-    elements.statusCard.className = 'status-card ' + (settings.enabled ? 'active' : 'inactive');
+  // Toggle active/inactive states
+  if (elements.activeState) {
+    elements.activeState.style.display = settings.enabled ? 'block' : 'none';
   }
-  if (elements.statusIcon) {
-    elements.statusIcon.textContent = settings.enabled ? '✓' : '✕';
-  }
-  if (elements.statusText) {
-    elements.statusText.textContent = settings.enabled ? 'Protection active' : 'Protection disabled';
+  if (elements.inactiveState) {
+    elements.inactiveState.style.display = settings.enabled ? 'none' : 'block';
   }
   
   // Max tabs
@@ -167,6 +179,8 @@ function updateUI() {
   if (elements.currentStreak) elements.currentStreak.textContent = stats.currentStreak;
   if (elements.bestStreak) elements.bestStreak.textContent = stats.bestStreak;
   if (elements.blockedToday) elements.blockedToday.textContent = stats.blockedToday;
+  if (elements.blockedWeek) elements.blockedWeek.textContent = stats.blockedWeek;
+  if (elements.blockedTotal) elements.blockedTotal.textContent = stats.blockedTotal;
   if (elements.statsMessage) elements.statsMessage.textContent = getRandomItem(STATS_MESSAGES);
 }
 
@@ -232,13 +246,15 @@ function showFrictionModal(action) {
   const titles = {
     disable: 'Disable Protection?',
     allowlist: 'Enable Allowlist?',
-    unlock: 'Unlock Tab Limit?'
+    unlock: 'Unlock Tab Limit?',
+    disableGlobal: 'Disable Global Limit?'
   };
   
   const messages = {
     disable: 'This will allow unlimited tabs. Type the phrase to confirm:',
     allowlist: 'This lets some sites bypass limits. Type the phrase to confirm:',
-    unlock: 'This allows changing your tab limit. Type the phrase to confirm:'
+    unlock: 'This allows changing your tab limit. Type the phrase to confirm:',
+    disableGlobal: 'This allows tabs in other windows. Type the phrase to confirm:'
   };
   
   elements.modalTitle.textContent = titles[action];
@@ -274,6 +290,7 @@ async function confirmFrictionAction() {
   if (currentFrictionAction === 'disable') settings.enabled = false;
   else if (currentFrictionAction === 'allowlist') settings.allowlistEnabled = true;
   else if (currentFrictionAction === 'unlock') settings.tabLimitLocked = false;
+  else if (currentFrictionAction === 'disableGlobal') settings.globalLimit = false;
   
   await saveSettings();
   updateUI();
@@ -349,7 +366,7 @@ function setupEventListeners() {
     });
   }
   
-  // Disable button
+  // Disable button (header)
   if (elements.disableBtn) {
     elements.disableBtn.addEventListener('click', async () => {
       if (settings.enabled) {
@@ -362,13 +379,29 @@ function setupEventListeners() {
     });
   }
   
-  // Global limit toggle
-  if (elements.globalLimitToggle) {
-    elements.globalLimitToggle.addEventListener('change', async (e) => {
-      settings.globalLimit = e.target.checked;
+  // Enable button (CTA in inactive state)
+  if (elements.enableBtn) {
+    elements.enableBtn.addEventListener('click', async () => {
+      settings.enabled = true;
       await saveSettings();
       updateUI();
-      await updateTabCount();
+    });
+  }
+  
+  // Global limit toggle (friction to DISABLE)
+  if (elements.globalLimitToggle) {
+    elements.globalLimitToggle.addEventListener('change', async (e) => {
+      if (!e.target.checked) {
+        // Trying to disable - requires friction
+        e.target.checked = true; // Revert toggle
+        showFrictionModal('disableGlobal');
+      } else {
+        // Enabling - no friction needed
+        settings.globalLimit = true;
+        await saveSettings();
+        updateUI();
+        await updateTabCount();
+      }
     });
   }
   

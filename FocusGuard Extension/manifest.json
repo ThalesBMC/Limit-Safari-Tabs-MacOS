@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "FocusGuard",
+  "name": "Safari Tab Limit",
   "version": "1.0.0",
-  "description": "Limite suas abas a apenas 2 para manter o foco e evitar multitasking.",
+  "description": "Limit your tabs to stay focused and avoid multitasking.",
   "icons": {
     "16": "images/icon-16.png",
     "48": "images/icon-48.png",
