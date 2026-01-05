@@ -49,6 +49,7 @@ TabCap is a Safari extension that helps you limit the number of open tabs in you
 ### Can I use TabCap on multiple Safari windows?
 
 Yes! You can choose between:
+
 - **Global Limit**: Total tabs across all Safari windows
 - **Per Window Limit**: Maximum tabs per individual window
 
@@ -69,9 +70,8 @@ If you encounter a bug or have a feature request:
 
 ## Contact
 
-For support inquiries, please open an issue on GitHub or contact us through the App Store.
+For support inquiries, please open an issue on GitHub.
 
 ---
 
 **TabCap** - Limit your Safari tabs to stay focused and avoid multitasking.
-
