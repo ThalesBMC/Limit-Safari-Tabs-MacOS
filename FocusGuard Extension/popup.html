@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FocusGuard</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="popup">
+      <!-- Header -->
+      <header class="header">
+        <div class="logo">
+          <span class="logo-icon">🛡️</span>
+          <span class="logo-text">FocusGuard</span>
+        </div>
+        <div class="header-right">
+          <button class="icon-btn" id="disableBtn" title="Disable extension">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect
+                x="6"
+                y="4"
+                width="4"
+                height="16"
+                rx="1"
+                id="pauseIcon"
+              ></rect>
+              <rect
+                x="14"
+                y="4"
+                width="4"
+                height="16"
+                rx="1"
+                class="pause-bar"
+              ></rect>
+              <polygon
+                points="5 3 19 12 5 21 5 3"
+                id="playIcon"
+                style="display: none"
+                fill="currentColor"
+                stroke="none"
+              ></polygon>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Navigation Tabs -->
+      <nav class="tabs">
+        <button class="tab active" data-tab="settings">Settings</button>
+        <button class="tab" data-tab="stats">Stats</button>
+      </nav>
+
+      <!-- Settings Tab -->
+      <main class="main tab-content active" id="settings-tab">
+        <div class="status-card" id="statusCard">
+          <div class="status-icon" id="statusIcon">✓</div>
+          <div class="status-info">
+            <p class="status-text" id="statusText">Protection active</p>
+            <p class="tab-count">
+              <span id="currentTabs">0</span>/<span id="maxTabs">2</span> tabs
+            </p>
+          </div>
+        </div>
+
+        <div class="settings">
+          <!-- Tab Limit with Lock -->
+          <div class="setting-group">
+            <label class="setting-label">Tab limit</label>
+            <div class="stepper-row">
+              <div class="stepper" id="stepper">
+                <button class="stepper-btn" id="decreaseMax">−</button>
+                <span class="stepper-value" id="maxTabsValue">2</span>
+                <button class="stepper-btn" id="increaseMax">+</button>
+              </div>
+              <button class="lock-btn" id="lockBtn" title="Lock tab limit">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  id="lockIcon"
+                  style="display: none"
+                >
+                  <rect
+                    x="3"
+                    y="11"
+                    width="18"
+                    height="11"
+                    rx="2"
+                    ry="2"
+                  ></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  id="unlockIcon"
+                >
+                  <rect
+                    x="3"
+                    y="11"
+                    width="18"
+                    height="11"
+                    rx="2"
+                    ry="2"
+                  ></rect>
+                  <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="lock-hint" id="lockHint">
+              <span class="unlocked-hint">Click 🔒 to lock your limit</span>
+              <span class="locked-hint" style="display: none">🔒 Locked</span>
+            </p>
+          </div>
+
+          <!-- Global Limit Toggle -->
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Global limit</label>
+              <label class="toggle small">
+                <input type="checkbox" id="globalLimitToggle" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint" id="globalHint">
+              <span class="per-window-hint">Limit applies per window</span>
+              <span class="global-hint" style="display: none"
+                >🌐 Limit applies across ALL windows</span
+              >
+            </p>
+          </div>
+
+          <!-- Behavior info -->
+          <div class="setting-group">
+            <div class="info-box">
+              <span class="info-icon">⚡</span>
+              <span class="info-text"
+                >Excess tabs are closed automatically</span
+              >
+            </div>
+          </div>
+
+          <!-- Allowlist Section -->
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Allowlist</label>
+              <label class="toggle small">
+                <input type="checkbox" id="allowlistToggle" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Domains that bypass the tab limit</p>
+
+            <div class="allowlist-container" id="allowlistContainer">
+              <div class="allowlist-input-row">
+                <input
+                  type="text"
+                  id="allowlistInput"
+                  placeholder="e.g. notion.so"
+                  class="text-input"
+                />
+                <button class="btn-small" id="addDomainBtn">Add</button>
+              </div>
+              <div class="domains-list" id="domainsList"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Stats Tab -->
+      <main class="main tab-content" id="stats-tab">
+        <div class="stats-hero">
+          <div class="streak-container">
+            <div class="streak-flame">🔥</div>
+            <div class="streak-number" id="currentStreak">0</div>
+            <div class="streak-label">day streak</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="blockedToday">0</div>
+            <div class="stat-label">blocked today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="bestStreak">0</div>
+            <div class="stat-label">best streak</div>
+          </div>
+        </div>
+
+        <div class="stats-message" id="statsMessage">
+          Keep going! Every tab you don't open is a win.
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <p class="footer-text">One thing at a time.</p>
+      </footer>
+    </div>
+
+    <!-- Friction Modal -->
+    <div class="modal-overlay" id="frictionModal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-icon">⚠️</span>
+          <h3 class="modal-title" id="modalTitle">Are you sure?</h3>
+        </div>
+        <p class="modal-message" id="modalMessage">
+          Type the phrase below to confirm:
+        </p>
+        <div class="phrase-box" id="phraseBox">
+          I am intentionally choosing distraction
+        </div>
+        <input
+          type="text"
+          class="phrase-input"
+          id="phraseInput"
+          placeholder="Type the phrase above..."
+        />
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+          <button class="btn btn-danger" id="modalConfirm" disabled>
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

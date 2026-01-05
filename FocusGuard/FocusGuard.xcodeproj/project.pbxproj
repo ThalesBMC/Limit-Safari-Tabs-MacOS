@@ -1,0 +1,617 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		FF4B722D2F0B3AEF000C15B7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF4B722C2F0B3AEF000C15B7 /* AppDelegate.swift */; };
+		FF4B72312F0B3AEF000C15B7 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = FF4B722F2F0B3AEF000C15B7 /* Main.html */; };
+		FF4B72332F0B3AEF000C15B7 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72322F0B3AEF000C15B7 /* Icon.png */; };
+		FF4B72352F0B3AEF000C15B7 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72342F0B3AEF000C15B7 /* Style.css */; };
+		FF4B72372F0B3AEF000C15B7 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72362F0B3AEF000C15B7 /* Script.js */; };
+		FF4B72392F0B3AEF000C15B7 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF4B72382F0B3AEF000C15B7 /* ViewController.swift */; };
+		FF4B723C2F0B3AEF000C15B7 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = FF4B723A2F0B3AEF000C15B7 /* Main.storyboard */; };
+		FF4B723E2F0B3AF0000C15B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FF4B723D2F0B3AF0000C15B7 /* Assets.xcassets */; };
+		FF4B72452F0B3AF0000C15B7 /* FocusGuard Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FF4B72442F0B3AF0000C15B7 /* FocusGuard Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FF4B724A2F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF4B72492F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift */; };
+		FF4B725F2F0B3AF1000C15B7 /* popup.js in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72562F0B3AF1000C15B7 /* popup.js */; };
+		FF4B72602F0B3AF1000C15B7 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72572F0B3AF1000C15B7 /* background.js */; };
+		FF4B72612F0B3AF1000C15B7 /* images in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72582F0B3AF1000C15B7 /* images */; };
+		FF4B72622F0B3AF1000C15B7 /* popup.html in Resources */ = {isa = PBXBuildFile; fileRef = FF4B72592F0B3AF1000C15B7 /* popup.html */; };
+		FF4B72642F0B3AF1000C15B7 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = FF4B725B2F0B3AF1000C15B7 /* manifest.json */; };
+		FF4B72652F0B3AF1000C15B7 /* popup.css in Resources */ = {isa = PBXBuildFile; fileRef = FF4B725C2F0B3AF1000C15B7 /* popup.css */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		FF4B72462F0B3AF0000C15B7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FF4B72212F0B3AEF000C15B7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FF4B72432F0B3AF0000C15B7;
+			remoteInfo = "FocusGuard Extension";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		FF4B72512F0B3AF0000C15B7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				FF4B72452F0B3AF0000C15B7 /* FocusGuard Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		FF4B72292F0B3AEF000C15B7 /* FocusGuard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusGuard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF4B722C2F0B3AEF000C15B7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		FF4B72302F0B3AEF000C15B7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		FF4B72322F0B3AEF000C15B7 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		FF4B72342F0B3AEF000C15B7 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		FF4B72362F0B3AEF000C15B7 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		FF4B72382F0B3AEF000C15B7 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		FF4B723B2F0B3AEF000C15B7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		FF4B723D2F0B3AF0000C15B7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		FF4B723F2F0B3AF0000C15B7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FF4B72442F0B3AF0000C15B7 /* FocusGuard Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "FocusGuard Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF4B72492F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		FF4B724B2F0B3AF0000C15B7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FF4B72562F0B3AF1000C15B7 /* popup.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = popup.js; path = "../../FocusGuard Extension/popup.js"; sourceTree = "<group>"; };
+		FF4B72572F0B3AF1000C15B7 /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = "../../FocusGuard Extension/background.js"; sourceTree = "<group>"; };
+		FF4B72582F0B3AF1000C15B7 /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = images; path = "../../FocusGuard Extension/images"; sourceTree = "<group>"; };
+		FF4B72592F0B3AF1000C15B7 /* popup.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = popup.html; path = "../../FocusGuard Extension/popup.html"; sourceTree = "<group>"; };
+		FF4B725B2F0B3AF1000C15B7 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = "../../FocusGuard Extension/manifest.json"; sourceTree = "<group>"; };
+		FF4B725C2F0B3AF1000C15B7 /* popup.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; name = popup.css; path = "../../FocusGuard Extension/popup.css"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FF4B72262F0B3AEF000C15B7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF4B72412F0B3AF0000C15B7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		FF4B72202F0B3AEF000C15B7 = {
+			isa = PBXGroup;
+			children = (
+				FF4B722B2F0B3AEF000C15B7 /* FocusGuard */,
+				FF4B72482F0B3AF0000C15B7 /* FocusGuard Extension */,
+				FF4B722A2F0B3AEF000C15B7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		FF4B722A2F0B3AEF000C15B7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				FF4B72292F0B3AEF000C15B7 /* FocusGuard.app */,
+				FF4B72442F0B3AF0000C15B7 /* FocusGuard Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FF4B722B2F0B3AEF000C15B7 /* FocusGuard */ = {
+			isa = PBXGroup;
+			children = (
+				FF4B722C2F0B3AEF000C15B7 /* AppDelegate.swift */,
+				FF4B72382F0B3AEF000C15B7 /* ViewController.swift */,
+				FF4B723A2F0B3AEF000C15B7 /* Main.storyboard */,
+				FF4B723D2F0B3AF0000C15B7 /* Assets.xcassets */,
+				FF4B723F2F0B3AF0000C15B7 /* Info.plist */,
+				FF4B722E2F0B3AEF000C15B7 /* Resources */,
+			);
+			path = FocusGuard;
+			sourceTree = "<group>";
+		};
+		FF4B722E2F0B3AEF000C15B7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FF4B722F2F0B3AEF000C15B7 /* Main.html */,
+				FF4B72322F0B3AEF000C15B7 /* Icon.png */,
+				FF4B72342F0B3AEF000C15B7 /* Style.css */,
+				FF4B72362F0B3AEF000C15B7 /* Script.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		FF4B72482F0B3AF0000C15B7 /* FocusGuard Extension */ = {
+			isa = PBXGroup;
+			children = (
+				FF4B72552F0B3AF1000C15B7 /* Resources */,
+				FF4B72492F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift */,
+				FF4B724B2F0B3AF0000C15B7 /* Info.plist */,
+			);
+			path = "FocusGuard Extension";
+			sourceTree = "<group>";
+		};
+		FF4B72552F0B3AF1000C15B7 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FF4B72562F0B3AF1000C15B7 /* popup.js */,
+				FF4B72572F0B3AF1000C15B7 /* background.js */,
+				FF4B72582F0B3AF1000C15B7 /* images */,
+				FF4B72592F0B3AF1000C15B7 /* popup.html */,
+				FF4B725B2F0B3AF1000C15B7 /* manifest.json */,
+				FF4B725C2F0B3AF1000C15B7 /* popup.css */,
+			);
+			name = Resources;
+			path = "FocusGuard Extension";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FF4B72282F0B3AEF000C15B7 /* FocusGuard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF4B72522F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "FocusGuard" */;
+			buildPhases = (
+				FF4B72252F0B3AEF000C15B7 /* Sources */,
+				FF4B72262F0B3AEF000C15B7 /* Frameworks */,
+				FF4B72272F0B3AEF000C15B7 /* Resources */,
+				FF4B72512F0B3AF0000C15B7 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				FF4B72472F0B3AF0000C15B7 /* PBXTargetDependency */,
+			);
+			name = FocusGuard;
+			packageProductDependencies = (
+			);
+			productName = FocusGuard;
+			productReference = FF4B72292F0B3AEF000C15B7 /* FocusGuard.app */;
+			productType = "com.apple.product-type.application";
+		};
+		FF4B72432F0B3AF0000C15B7 /* FocusGuard Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF4B724E2F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "FocusGuard Extension" */;
+			buildPhases = (
+				FF4B72402F0B3AF0000C15B7 /* Sources */,
+				FF4B72412F0B3AF0000C15B7 /* Frameworks */,
+				FF4B72422F0B3AF0000C15B7 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "FocusGuard Extension";
+			packageProductDependencies = (
+			);
+			productName = "FocusGuard Extension";
+			productReference = FF4B72442F0B3AF0000C15B7 /* FocusGuard Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FF4B72212F0B3AEF000C15B7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					FF4B72282F0B3AEF000C15B7 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					FF4B72432F0B3AF0000C15B7 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+				};
+			};
+			buildConfigurationList = FF4B72242F0B3AEF000C15B7 /* Build configuration list for PBXProject "FocusGuard" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = FF4B72202F0B3AEF000C15B7;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FF4B722A2F0B3AEF000C15B7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FF4B72282F0B3AEF000C15B7 /* FocusGuard */,
+				FF4B72432F0B3AF0000C15B7 /* FocusGuard Extension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		FF4B72272F0B3AEF000C15B7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FF4B72332F0B3AEF000C15B7 /* Icon.png in Resources */,
+				FF4B723C2F0B3AEF000C15B7 /* Main.storyboard in Resources */,
+				FF4B72372F0B3AEF000C15B7 /* Script.js in Resources */,
+				FF4B72312F0B3AEF000C15B7 /* Main.html in Resources */,
+				FF4B723E2F0B3AF0000C15B7 /* Assets.xcassets in Resources */,
+				FF4B72352F0B3AEF000C15B7 /* Style.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF4B72422F0B3AF0000C15B7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FF4B72612F0B3AF1000C15B7 /* images in Resources */,
+				FF4B72652F0B3AF1000C15B7 /* popup.css in Resources */,
+				FF4B72622F0B3AF1000C15B7 /* popup.html in Resources */,
+				FF4B72602F0B3AF1000C15B7 /* background.js in Resources */,
+				FF4B725F2F0B3AF1000C15B7 /* popup.js in Resources */,
+				FF4B72642F0B3AF1000C15B7 /* manifest.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FF4B72252F0B3AEF000C15B7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FF4B72392F0B3AEF000C15B7 /* ViewController.swift in Sources */,
+				FF4B722D2F0B3AEF000C15B7 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FF4B72402F0B3AF0000C15B7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FF4B724A2F0B3AF0000C15B7 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		FF4B72472F0B3AF0000C15B7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FF4B72432F0B3AF0000C15B7 /* FocusGuard Extension */;
+			targetProxy = FF4B72462F0B3AF0000C15B7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		FF4B722F2F0B3AEF000C15B7 /* Main.html */ = {
+			isa = PBXVariantGroup;
+			children = (
+				FF4B72302F0B3AEF000C15B7 /* Base */,
+			);
+			name = Main.html;
+			sourceTree = "<group>";
+		};
+		FF4B723A2F0B3AEF000C15B7 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				FF4B723B2F0B3AEF000C15B7 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		FF4B724C2F0B3AF0000C15B7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		FF4B724D2F0B3AF0000C15B7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		FF4B724F2F0B3AF0000C15B7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "FocusGuard Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "FocusGuard Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.focusguard.FocusGuard.Extension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		FF4B72502F0B3AF0000C15B7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "FocusGuard Extension/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "FocusGuard Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.focusguard.FocusGuard.Extension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		FF4B72532F0B3AF0000C15B7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusGuard/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FocusGuard;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.focusguard.FocusGuard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		FF4B72542F0B3AF0000C15B7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusGuard/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FocusGuard;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.focusguard.FocusGuard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		FF4B72242F0B3AEF000C15B7 /* Build configuration list for PBXProject "FocusGuard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF4B724C2F0B3AF0000C15B7 /* Debug */,
+				FF4B724D2F0B3AF0000C15B7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF4B724E2F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "FocusGuard Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF4B724F2F0B3AF0000C15B7 /* Debug */,
+				FF4B72502F0B3AF0000C15B7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FF4B72522F0B3AF0000C15B7 /* Build configuration list for PBXNativeTarget "FocusGuard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF4B72532F0B3AF0000C15B7 /* Debug */,
+				FF4B72542F0B3AF0000C15B7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FF4B72212F0B3AEF000C15B7 /* Project object */;
+}
