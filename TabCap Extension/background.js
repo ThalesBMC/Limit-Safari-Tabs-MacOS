@@ -129,24 +129,38 @@ async function incrementBlocked() {
   return stats;
 }
 
-// Count tabs in a specific window
-async function getWindowTabCount(windowId) {
+// Count tabs in a specific window (excluding allowlisted if enabled)
+async function getWindowTabCount(windowId, settings) {
   const tabs = await browser.tabs.query({ windowId });
+
+  // If allowlist is enabled, don't count allowlisted tabs
+  if (settings && settings.allowlistEnabled && settings.allowlist.length > 0) {
+    return tabs.filter((tab) => !isUrlAllowed(tab.url, settings.allowlist))
+      .length;
+  }
+
   return tabs.length;
 }
 
-// Count ALL tabs across all windows
-async function getGlobalTabCount() {
+// Count ALL tabs across all windows (excluding allowlisted if enabled)
+async function getGlobalTabCount(settings) {
   const tabs = await browser.tabs.query({});
+
+  // If allowlist is enabled, don't count allowlisted tabs
+  if (settings && settings.allowlistEnabled && settings.allowlist.length > 0) {
+    return tabs.filter((tab) => !isUrlAllowed(tab.url, settings.allowlist))
+      .length;
+  }
+
   return tabs.length;
 }
 
 // Get current tab count based on settings (per window or global)
 async function getCurrentTabCount(windowId, settings) {
   if (settings.globalLimit) {
-    return await getGlobalTabCount();
+    return await getGlobalTabCount(settings);
   } else {
-    return await getWindowTabCount(windowId);
+    return await getWindowTabCount(windowId, settings);
   }
 }
 
@@ -189,6 +203,7 @@ async function closeTab(tabId) {
 }
 
 // Check pending tab after timeout
+// RULE: We ONLY close THIS pending tab if it's not allowlisted, NEVER other tabs
 async function checkPendingTab(tabId) {
   const pending = pendingTabs.get(tabId);
   if (!pending) return;
@@ -199,40 +214,40 @@ async function checkPendingTab(tabId) {
 
   const settings = await getSettings();
   if (!settings.enabled) return;
+  if (!settings.allowlistEnabled) return; // Pending tabs only exist when allowlist is enabled
 
   try {
     const tab = await browser.tabs.get(tabId);
-    const tabCount = await getCurrentTabCount(tab.windowId, settings);
 
-    if (tabCount <= settings.maxTabs) return;
-
-    // Check allowlist if URL is available
-    if (
-      isRealUrl(tab.url) &&
-      settings.allowlistEnabled &&
-      isUrlAllowed(tab.url, settings.allowlist)
-    ) {
-      console.log(`TabCap: Tab in allowlist, keeping`);
+    // Check if this tab is in allowlist
+    if (isRealUrl(tab.url) && isUrlAllowed(tab.url, settings.allowlist)) {
+      // Tab is allowlisted - it doesn't count toward limit, keep it
+      console.log(`TabCap: Pending tab is in allowlist, keeping`);
       return;
     }
 
-    // Close the tab
-    console.log(
-      `TabCap: Pending timeout, closing tab (${
-        settings.globalLimit ? "global" : "per-window"
-      } limit)`
-    );
+    // Tab is NOT in allowlist - check if we're over limit
+    const tabCount = await getCurrentTabCount(tab.windowId, settings);
+    if (tabCount <= settings.maxTabs) {
+      console.log(`TabCap: Within limit now, keeping tab`);
+      return;
+    }
+
+    // Over limit and this tab is NOT allowlisted - close THIS tab only
+    console.log(`TabCap: Closing pending tab (not in allowlist, over limit)`);
     await closeTab(tabId);
   } catch (error) {
-    // Tab doesn't exist
+    // Tab doesn't exist anymore
   }
 }
 
 // Handler: New tab created
+// RULE: We ONLY close the NEW tab, NEVER existing tabs
 async function handleTabCreated(tab) {
   const settings = await getSettings();
   if (!settings.enabled) return;
 
+  // Broadcast count update
   const tabCount = await getCurrentTabCount(tab.windowId, settings);
   const limitType = settings.globalLimit ? "global" : "window";
 
@@ -240,58 +255,63 @@ async function handleTabCreated(tab) {
     `TabCap: Tab created. Count: ${tabCount}/${settings.maxTabs} (${limitType})`
   );
 
-  // Broadcast count update
   browser.runtime
     .sendMessage({ type: "TAB_COUNT_UPDATED", count: tabCount })
     .catch(() => {});
 
+  // If within limit, nothing to do
   if (tabCount <= settings.maxTabs) return;
 
-  // If URL is available, check allowlist
-  if (isRealUrl(tab.url)) {
-    if (
-      settings.allowlistEnabled &&
-      isUrlAllowed(tab.url, settings.allowlist)
-    ) {
-      console.log(`TabCap: Tab in allowlist, keeping`);
+  // Over limit - but we ONLY close the NEW tab, never existing ones
+
+  // If allowlist is enabled, check if this new tab is in allowlist
+  if (settings.allowlistEnabled) {
+    // If URL is available, check if it's allowlisted
+    if (isRealUrl(tab.url)) {
+      if (isUrlAllowed(tab.url, settings.allowlist)) {
+        // New tab is in allowlist - it doesn't count, so we're actually within limit
+        console.log(`TabCap: New tab in allowlist, doesn't count toward limit`);
+        return;
+      }
+      // New tab is NOT in allowlist - close IT (not old tabs)
+      console.log(`TabCap: Closing NEW tab (not in allowlist, over limit)`);
+      await closeTab(tab.id);
       return;
     }
 
-    // Close immediately
-    console.log(`TabCap: Closing excess tab`);
-    await closeTab(tab.id);
+    // No URL yet - wait and check later
+    console.log(`TabCap: Tab pending URL check`);
+    pendingTabs.set(tab.id, {
+      windowId: tab.windowId,
+      timestamp: Date.now(),
+    });
+    setTimeout(() => checkPendingTab(tab.id), PENDING_TIMEOUT + 50);
     return;
   }
 
-  // No URL yet - mark as pending
-  console.log(`TabCap: Tab pending URL check`);
-  pendingTabs.set(tab.id, {
-    windowId: tab.windowId,
-    timestamp: Date.now(),
-  });
-
-  setTimeout(() => checkPendingTab(tab.id), PENDING_TIMEOUT + 50);
+  // Allowlist disabled - close the NEW tab (never existing tabs)
+  console.log(`TabCap: Closing NEW excess tab`);
+  await closeTab(tab.id);
 }
 
-// Handler: Tab updated (for pending tabs)
+// Handler: Tab updated (for pending tabs - only used when allowlist is enabled)
 async function handleTabUpdated(tabId, changeInfo, tab) {
-  if (!changeInfo.url) return;
+  // Only process if this tab is pending (awaiting URL check for allowlist)
   if (!pendingTabs.has(tabId)) return;
+  if (!changeInfo.url) return;
   if (!isRealUrl(changeInfo.url)) return;
 
   pendingTabs.delete(tabId);
 
   const settings = await getSettings();
   if (!settings.enabled) return;
+  if (!settings.allowlistEnabled) return; // Shouldn't happen, but safety check
 
   const tabCount = await getCurrentTabCount(tab.windowId, settings);
   if (tabCount <= settings.maxTabs) return;
 
   // Check allowlist
-  if (
-    settings.allowlistEnabled &&
-    isUrlAllowed(changeInfo.url, settings.allowlist)
-  ) {
+  if (isUrlAllowed(changeInfo.url, settings.allowlist)) {
     console.log(`TabCap: Tab URL in allowlist, keeping`);
     return;
   }
@@ -393,7 +413,7 @@ browser.tabs.onMoved.addListener(handleTabMoved);
 browser.tabs.onAttached.addListener(handleTabAttached);
 browser.tabs.onDetached.addListener(handleTabDetached);
 
-// Periodic consistency check - ensures count is always correct
+// Periodic consistency check - only broadcasts count, NEVER closes old tabs
 async function periodicCheck() {
   try {
     const settings = await getSettings();
@@ -408,48 +428,11 @@ async function periodicCheck() {
 
     const currentCount = await getCurrentTabCount(activeTab.windowId, settings);
 
-    // Always broadcast the correct count
+    // Only broadcast the correct count - never close tabs here
+    // Closing is handled ONLY in handleTabCreated for NEW tabs
     browser.runtime
       .sendMessage({ type: "TAB_COUNT_UPDATED", count: currentCount })
       .catch(() => {});
-
-    // If over limit, find and close excess tabs
-    if (currentCount > settings.maxTabs) {
-      console.log(
-        `TabCap: Periodic check found ${currentCount}/${settings.maxTabs} tabs - cleaning up`
-      );
-
-      // Get tabs to evaluate
-      const tabs = settings.globalLimit
-        ? await browser.tabs.query({})
-        : await browser.tabs.query({ windowId: activeTab.windowId });
-
-      // Sort by id descending (newest first)
-      tabs.sort((a, b) => b.id - a.id);
-
-      let tabsToClose = currentCount - settings.maxTabs;
-
-      for (const tab of tabs) {
-        if (tabsToClose <= 0) break;
-
-        // Skip active tab
-        if (tab.active) continue;
-
-        // Skip allowlisted tabs
-        if (
-          settings.allowlistEnabled &&
-          isRealUrl(tab.url) &&
-          isUrlAllowed(tab.url, settings.allowlist)
-        ) {
-          continue;
-        }
-
-        // Close this tab
-        console.log(`TabCap: Periodic cleanup closing tab ${tab.id}`);
-        await closeTab(tab.id);
-        tabsToClose--;
-      }
-    }
   } catch (error) {
     console.error("TabCap: Periodic check error:", error);
   }
