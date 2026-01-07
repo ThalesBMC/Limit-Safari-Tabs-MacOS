@@ -9,7 +9,7 @@ import Cocoa
 import SafariServices
 import WebKit
 
-let extensionBundleIdentifier = "com.TabCap.TabCap.Extension"
+let extensionBundleIdentifier = "com.thales.tabcap.Extension"
 
 class ViewController: NSViewController, WKNavigationDelegate, WKScriptMessageHandler {
 
@@ -43,11 +43,15 @@ class ViewController: NSViewController, WKNavigationDelegate, WKScriptMessageHan
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        if (message.body as! String != "open-preferences") {
-            return;
+        guard let messageString = message.body as? String, messageString == "open-preferences" else {
+            return
         }
 
         SFSafariApplication.showPreferencesForExtension(withIdentifier: extensionBundleIdentifier) { error in
+            guard error == nil else {
+                // Failed to open Safari preferences, don't terminate
+                return
+            }
             DispatchQueue.main.async {
                 NSApplication.shared.terminate(nil)
             }
