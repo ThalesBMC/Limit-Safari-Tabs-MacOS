@@ -364,6 +364,12 @@ function setupEventListeners() {
       elements.tabContents.forEach((tc) => tc.classList.remove("active"));
       tab.classList.add("active");
       document.getElementById(`${targetTab}-tab`).classList.add("active");
+
+      // Reset scroll position
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+      elements.tabContents.forEach((tc) => (tc.scrollTop = 0));
     });
   });
 
