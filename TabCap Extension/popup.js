@@ -395,7 +395,7 @@ function setupEventListeners() {
   if (elements.increaseBtn) {
     elements.increaseBtn.addEventListener("click", async () => {
       if (settings.tabLimitLocked) return;
-      if (settings.maxTabs < 99) {
+      if (settings.maxTabs < 500) {
         settings.maxTabs++;
         await saveSettings();
         updateUI();
@@ -485,6 +485,9 @@ function setupEventListeners() {
       if (e.key === "Enter") confirmFrictionAction();
       if (e.key === "Escape") hideFrictionModal();
     });
+    // Prevent copy and paste to ensure user types the phrase manually
+    elements.phraseInput.addEventListener("paste", (e) => e.preventDefault());
+    elements.phraseInput.addEventListener("copy", (e) => e.preventDefault());
   }
   if (elements.frictionModal) {
     elements.frictionModal.addEventListener("click", (e) => {

@@ -36,6 +36,52 @@ const allowlistTabs = new Set();
 // How long to wait for URL before closing (ms)
 const PENDING_TIMEOUT = 300;
 
+// Update extension badge with current tab count
+async function updateBadge() {
+  try {
+    const settings = await getSettings();
+    
+    // Show "OFF" when disabled
+    if (!settings.enabled) {
+      await browser.action.setBadgeText({ text: "OFF" });
+      await browser.action.setBadgeBackgroundColor({ color: "#737373" });
+      return;
+    }
+    
+    // Get current tab count
+    const [activeTab] = await browser.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    
+    if (!activeTab) {
+      await browser.action.setBadgeText({ text: "" });
+      return;
+    }
+    
+    const count = await getCurrentTabCount(activeTab.windowId, settings);
+    const max = settings.maxTabs;
+    const ratio = count / max;
+    
+    // Set badge text as "X/Y"
+    await browser.action.setBadgeText({ text: `${count}/${max}` });
+    
+    // Color based on proximity to limit
+    let color;
+    if (count >= max) {
+      color = "#ef4444"; // Red - at limit
+    } else if (ratio >= 0.7) {
+      color = "#f59e0b"; // Yellow - 70%+ of limit
+    } else {
+      color = "#22c55e"; // Green - below 70%
+    }
+    
+    await browser.action.setBadgeBackgroundColor({ color });
+  } catch (error) {
+    console.log("TabCap: Badge update error:", error);
+  }
+}
+
 // Load settings
 async function getSettings() {
   try {
@@ -276,6 +322,9 @@ async function handleTabCreated(tab) {
     .sendMessage({ type: "TAB_COUNT_UPDATED", count: tabCount })
     .catch(() => {});
 
+  // Update badge
+  await updateBadge();
+
   // If within limit, nothing to do
   if (tabCount <= settings.maxTabs) return;
 
@@ -380,7 +429,10 @@ async function handleTabRemoved(tabId) {
   allowlistTabs.delete(tabId);
 
   // Small delay to let Safari finish updating
-  setTimeout(() => broadcastTabCount(), 100);
+  setTimeout(async () => {
+    await broadcastTabCount();
+    await updateBadge();
+  }, 100);
 }
 
 // Handler: Tab activated (window/tab group changed)
@@ -391,6 +443,7 @@ async function handleTabActivated(activeInfo) {
     browser.runtime
       .sendMessage({ type: "TAB_COUNT_UPDATED", count })
       .catch(() => {});
+    await updateBadge();
   } catch {}
 }
 
@@ -422,6 +475,7 @@ async function broadcastTabCount() {
       browser.runtime
         .sendMessage({ type: "TAB_COUNT_UPDATED", count })
         .catch(() => {});
+      await updateBadge();
     }
   } catch {}
 }
@@ -434,6 +488,7 @@ browser.runtime.onMessage.addListener(async (message) => {
 
     case "SAVE_SETTINGS":
       await saveSettings(message.settings);
+      await updateBadge();
       return { success: true };
 
     case "GET_STATS":
@@ -487,6 +542,9 @@ async function periodicCheck() {
       .sendMessage({ type: "TAB_COUNT_UPDATED", count: currentCount })
       .catch(() => {});
 
+    // Update badge
+    await updateBadge();
+
     // Note: Safari doesn't fire onUpdated when user types in URL bar
     // This is a known limitation - clicking links works, typing URLs doesn't
   } catch (error) {
@@ -499,6 +557,9 @@ async function periodicCheck() {
   const stats = await getStats();
   await saveStats(stats);
   console.log("TabCap: Initialized - Auto-close mode");
+
+  // Initialize badge
+  await updateBadge();
 
   // Start periodic consistency check every 2 seconds
   setInterval(periodicCheck, 2000);
