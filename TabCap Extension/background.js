@@ -12,6 +12,10 @@ const DEFAULT_SETTINGS = {
   allowlistEnabled: false,
   allowlist: [],
   tabLimitLocked: false,
+  inactiveEnabled: false,
+  inactiveMinutes: 30,
+  protectPinned: true,
+  protectAudible: true,
 };
 
 // Default stats
@@ -32,6 +36,12 @@ const pendingTabs = new Map();
 // Set of tabs currently showing allowlisted URLs
 // When these tabs navigate AWAY from allowlist, we check if over limit and close if needed
 const allowlistTabs = new Set();
+
+// Track last-accessed time for each tab (tabId -> timestamp)
+// Safari doesn't support tab.lastAccessed, so we track manually
+const tabLastAccessed = new Map();
+
+const INACTIVE_ALARM_NAME = "inactiveTabCheck";
 
 // How long to wait for URL before closing (ms)
 const PENDING_TIMEOUT = 300;
@@ -298,6 +308,10 @@ async function checkPendingTab(tabId) {
 // Handler: New tab created
 // RULE: We ONLY close the NEW tab, NEVER existing tabs
 async function handleTabCreated(tab) {
+  // Track creation time for inactive tab feature
+  tabLastAccessed.set(tab.id, Date.now());
+  persistTabActivity();
+
   const settings = await getSettings();
   if (!settings.enabled) return;
 
@@ -427,6 +441,8 @@ async function handleTabUpdated(tabId, changeInfo, tab) {
 async function handleTabRemoved(tabId) {
   pendingTabs.delete(tabId);
   allowlistTabs.delete(tabId);
+  tabLastAccessed.delete(tabId);
+  persistTabActivity();
 
   // Small delay to let Safari finish updating
   setTimeout(async () => {
@@ -437,6 +453,10 @@ async function handleTabRemoved(tabId) {
 
 // Handler: Tab activated (window/tab group changed)
 async function handleTabActivated(activeInfo) {
+  // Track last accessed time for inactive tab feature
+  tabLastAccessed.set(activeInfo.tabId, Date.now());
+  persistTabActivity();
+
   try {
     const settings = await getSettings();
     const count = await getCurrentTabCount(activeInfo.windowId, settings);
@@ -480,6 +500,158 @@ async function broadcastTabCount() {
   } catch {}
 }
 
+// Persist tab activity to storage (survives service worker restart)
+async function persistTabActivity() {
+  try {
+    const data = Object.fromEntries(tabLastAccessed);
+    await browser.storage.local.set({ tabActivity: data });
+  } catch {}
+}
+
+// Restore tab activity from storage on service worker startup
+async function restoreTabActivity() {
+  try {
+    const result = await browser.storage.local.get("tabActivity");
+    if (result.tabActivity) {
+      // Only restore entries for tabs that still exist
+      const allTabs = await browser.tabs.query({});
+      const existingIds = new Set(allTabs.map((t) => t.id));
+
+      for (const [idStr, timestamp] of Object.entries(result.tabActivity)) {
+        const id = parseInt(idStr);
+        if (existingIds.has(id)) {
+          tabLastAccessed.set(id, timestamp);
+        }
+      }
+    }
+
+    // Ensure all current tabs have an entry
+    const allTabs = await browser.tabs.query({});
+    const now = Date.now();
+    for (const tab of allTabs) {
+      if (!tabLastAccessed.has(tab.id)) {
+        tabLastAccessed.set(tab.id, now);
+      }
+    }
+
+    await persistTabActivity();
+  } catch {}
+}
+
+// Check and close inactive tabs
+async function checkInactiveTabs() {
+  const settings = await getSettings();
+  if (!settings.inactiveEnabled) return;
+
+  const now = Date.now();
+  const limitMs = settings.inactiveMinutes * 60 * 1000;
+
+  const allTabs = await browser.tabs.query({});
+  const tabsToClose = [];
+
+  for (const tab of allTabs) {
+    // Never close the active tab
+    if (tab.active) {
+      tabLastAccessed.set(tab.id, now);
+      continue;
+    }
+
+    // Protect pinned tabs
+    if (settings.protectPinned && tab.pinned) continue;
+
+    // Protect audible tabs
+    if (settings.protectAudible && tab.audible) continue;
+
+    const lastAccessed = tabLastAccessed.get(tab.id);
+    if (!lastAccessed) {
+      // Unknown tab, start tracking now
+      tabLastAccessed.set(tab.id, now);
+      continue;
+    }
+
+    const elapsed = now - lastAccessed;
+    if (elapsed >= limitMs) {
+      tabsToClose.push(tab.id);
+    }
+  }
+
+  // Close inactive tabs
+  for (const tabId of tabsToClose) {
+    try {
+      tabLastAccessed.delete(tabId);
+      await browser.tabs.remove(tabId);
+      console.log(`TabCap: Closed inactive tab ${tabId}`);
+    } catch (error) {
+      console.log(`TabCap: Error closing inactive tab ${tabId}:`, error);
+    }
+  }
+
+  if (tabsToClose.length > 0) {
+    await persistTabActivity();
+    await broadcastTabCount();
+    await updateBadge();
+  }
+}
+
+// Get inactive tabs info for popup display
+async function getInactiveTabsInfo() {
+  const settings = await getSettings();
+  const now = Date.now();
+  const allTabs = await browser.tabs.query({});
+  const result = [];
+
+  for (const tab of allTabs) {
+    if (tab.active) continue;
+
+    const lastAccessed = tabLastAccessed.get(tab.id) || now;
+    let isProtected = false;
+    let protectReason = "";
+
+    if (settings.protectPinned && tab.pinned) {
+      isProtected = true;
+      protectReason = "pinned";
+    } else if (settings.protectAudible && tab.audible) {
+      isProtected = true;
+      protectReason = "audible";
+    }
+
+    result.push({
+      id: tab.id,
+      title: tab.title || "Untitled",
+      lastAccessed,
+      isProtected,
+      protectReason,
+    });
+  }
+
+  // Sort by last accessed (oldest first)
+  result.sort((a, b) => a.lastAccessed - b.lastAccessed);
+  return result;
+}
+
+// Setup or clear the inactive tabs alarm
+async function setupInactiveAlarm() {
+  const settings = await getSettings();
+
+  // Clear existing alarm
+  try {
+    await browser.alarms.clear(INACTIVE_ALARM_NAME);
+  } catch {}
+
+  if (settings.inactiveEnabled) {
+    // Check every minute (minimum alarm interval)
+    await browser.alarms.create(INACTIVE_ALARM_NAME, { periodInMinutes: 1 });
+    console.log("TabCap: Inactive tab alarm created");
+  }
+}
+
+// Alarm listener
+browser.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === INACTIVE_ALARM_NAME) {
+    await checkInactiveTabs();
+  }
+});
+
 // Message listener
 browser.runtime.onMessage.addListener(async (message) => {
   switch (message.type) {
@@ -489,10 +661,15 @@ browser.runtime.onMessage.addListener(async (message) => {
     case "SAVE_SETTINGS":
       await saveSettings(message.settings);
       await updateBadge();
+      await setupInactiveAlarm();
       return { success: true };
 
     case "GET_STATS":
       return await getStats();
+
+    case "GET_INACTIVE_TABS":
+      const inactiveTabs = await getInactiveTabsInfo();
+      return { tabs: inactiveTabs };
 
     case "GET_TAB_COUNT":
       try {
@@ -557,6 +734,12 @@ async function periodicCheck() {
   const stats = await getStats();
   await saveStats(stats);
   console.log("TabCap: Initialized - Auto-close mode");
+
+  // Restore tab activity tracking from storage
+  await restoreTabActivity();
+
+  // Setup inactive tab alarm
+  await setupInactiveAlarm();
 
   // Initialize badge
   await updateBadge();

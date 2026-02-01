@@ -57,6 +57,7 @@
       <!-- Navigation Tabs -->
       <nav class="tabs">
         <button class="tab active" data-tab="settings">Settings</button>
+        <button class="tab" data-tab="inactive">Inactive</button>
         <button class="tab" data-tab="stats">Stats</button>
       </nav>
 
@@ -201,6 +202,68 @@
               <img src="images/logo.png" alt="" class="btn-enable-icon" />
               Activate Shield
             </button>
+          </div>
+        </div>
+      </main>
+
+      <!-- Inactive Tab -->
+      <main class="main tab-content" id="inactive-tab">
+        <div class="setting-group">
+          <div class="setting-header">
+            <label class="setting-label">Auto-close inactive tabs</label>
+            <label class="toggle small">
+              <input type="checkbox" id="inactiveToggle" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p class="setting-hint">Close tabs that haven't been used in a while</p>
+        </div>
+
+        <div class="inactive-settings" id="inactiveSettingsContainer">
+          <div class="setting-group">
+            <label class="setting-label">Close after (minutes)</label>
+            <div class="stepper" id="inactiveStepper">
+              <button class="stepper-btn" id="decreaseInactive">−</button>
+              <span class="stepper-value" id="inactiveMinutesValue">30</span>
+              <button class="stepper-btn" id="increaseInactive">+</button>
+            </div>
+            <p class="setting-hint">Minimum: 1 min</p>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Protect pinned tabs</label>
+              <label class="toggle small">
+                <input type="checkbox" id="protectPinnedToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Pinned tabs are never auto-closed</p>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Protect audible tabs</label>
+              <label class="toggle small">
+                <input type="checkbox" id="protectAudibleToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Tabs playing audio are never auto-closed</p>
+          </div>
+
+          <div class="setting-group">
+            <div class="info-box">
+              <span class="info-icon">💤</span>
+              <span class="info-text">The active tab is never auto-closed</span>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Tracked tabs</label>
+            <div class="inactive-tabs-list" id="inactiveTabsList">
+              <p class="setting-hint">No tracked tabs</p>
+            </div>
           </div>
         </div>
       </main>

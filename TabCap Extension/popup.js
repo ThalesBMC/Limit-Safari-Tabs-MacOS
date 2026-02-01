@@ -47,6 +47,10 @@ let settings = {
   allowlistEnabled: false,
   allowlist: [],
   tabLimitLocked: false,
+  inactiveEnabled: false,
+  inactiveMinutes: 30,
+  protectPinned: true,
+  protectAudible: true,
 };
 
 let stats = {
@@ -97,6 +101,14 @@ function initElements() {
     blockedToday: document.getElementById("blockedToday"),
     blockedWeek: document.getElementById("blockedWeek"),
     blockedTotal: document.getElementById("blockedTotal"),
+    inactiveToggle: document.getElementById("inactiveToggle"),
+    inactiveSettingsContainer: document.getElementById("inactiveSettingsContainer"),
+    inactiveMinutesValue: document.getElementById("inactiveMinutesValue"),
+    decreaseInactive: document.getElementById("decreaseInactive"),
+    increaseInactive: document.getElementById("increaseInactive"),
+    protectPinnedToggle: document.getElementById("protectPinnedToggle"),
+    protectAudibleToggle: document.getElementById("protectAudibleToggle"),
+    inactiveTabsList: document.getElementById("inactiveTabsList"),
     frictionModal: document.getElementById("frictionModal"),
     modalTitle: document.getElementById("modalTitle"),
     modalMessage: document.getElementById("modalMessage"),
@@ -184,6 +196,22 @@ function updateUI() {
     );
   }
   renderDomains();
+
+  // Inactive tabs
+  if (elements.inactiveToggle)
+    elements.inactiveToggle.checked = settings.inactiveEnabled;
+  if (elements.inactiveSettingsContainer) {
+    elements.inactiveSettingsContainer.classList.toggle(
+      "enabled",
+      settings.inactiveEnabled
+    );
+  }
+  if (elements.inactiveMinutesValue)
+    elements.inactiveMinutesValue.textContent = settings.inactiveMinutes;
+  if (elements.protectPinnedToggle)
+    elements.protectPinnedToggle.checked = settings.protectPinned;
+  if (elements.protectAudibleToggle)
+    elements.protectAudibleToggle.checked = settings.protectAudible;
 
   // Stats
   if (elements.currentStreak)
@@ -480,6 +508,52 @@ function setupEventListeners() {
     });
   }
 
+  // Inactive tabs toggle
+  if (elements.inactiveToggle) {
+    elements.inactiveToggle.addEventListener("change", async (e) => {
+      settings.inactiveEnabled = e.target.checked;
+      await saveSettings();
+      updateUI();
+    });
+  }
+
+  // Inactive minutes stepper
+  if (elements.decreaseInactive) {
+    elements.decreaseInactive.addEventListener("click", async () => {
+      if (settings.inactiveMinutes > 1) {
+        settings.inactiveMinutes = Math.max(1, settings.inactiveMinutes - (settings.inactiveMinutes <= 5 ? 1 : 5));
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+
+  if (elements.increaseInactive) {
+    elements.increaseInactive.addEventListener("click", async () => {
+      if (settings.inactiveMinutes < 480) {
+        settings.inactiveMinutes += settings.inactiveMinutes < 5 ? 1 : 5;
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+
+  // Protect pinned toggle
+  if (elements.protectPinnedToggle) {
+    elements.protectPinnedToggle.addEventListener("change", async (e) => {
+      settings.protectPinned = e.target.checked;
+      await saveSettings();
+    });
+  }
+
+  // Protect audible toggle
+  if (elements.protectAudibleToggle) {
+    elements.protectAudibleToggle.addEventListener("change", async (e) => {
+      settings.protectAudible = e.target.checked;
+      await saveSettings();
+    });
+  }
+
   // Modal
   if (elements.modalCancel)
     elements.modalCancel.addEventListener("click", hideFrictionModal);
@@ -502,6 +576,61 @@ function setupEventListeners() {
   }
 }
 
+// Inactive tabs list
+async function updateInactiveTabsList() {
+  if (!elements.inactiveTabsList) return;
+  try {
+    const response = await browser.runtime.sendMessage({ type: "GET_INACTIVE_TABS" });
+    if (!response || !response.tabs || response.tabs.length === 0) {
+      elements.inactiveTabsList.innerHTML = '<p class="setting-hint">No tracked tabs</p>';
+      return;
+    }
+
+    const now = Date.now();
+    const limitMs = settings.inactiveMinutes * 60 * 1000;
+
+    elements.inactiveTabsList.innerHTML = "";
+    response.tabs.forEach((tab) => {
+      const elapsed = now - tab.lastAccessed;
+      const remaining = Math.max(0, limitMs - elapsed);
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+
+      const ratio = elapsed / limitMs;
+      let badgeClass, badgeText;
+      if (tab.isProtected) {
+        badgeClass = "protected";
+        badgeText = tab.protectReason;
+      } else if (ratio >= 0.9) {
+        badgeClass = "danger";
+        badgeText = `${mins}m ${secs}s`;
+      } else if (ratio >= 0.6) {
+        badgeClass = "warning";
+        badgeText = `${mins}m ${secs}s`;
+      } else {
+        badgeClass = "safe";
+        badgeText = `${mins}m ${secs}s`;
+      }
+
+      const item = document.createElement("div");
+      item.className = "inactive-tab-item";
+      item.innerHTML = `
+        <div class="inactive-tab-info">
+          <span class="inactive-tab-title">${escapeHtml(tab.title || "Untitled")}</span>
+        </div>
+        <span class="inactive-tab-badge ${badgeClass}">${badgeText}</span>
+      `;
+      elements.inactiveTabsList.appendChild(item);
+    });
+  } catch {}
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // Initialize
 document.addEventListener("DOMContentLoaded", async () => {
   initElements();
@@ -510,5 +639,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateUI();
   await updateTabCount();
   setupEventListeners();
+  await updateInactiveTabsList();
   setInterval(updateTabCount, 1000);
+  setInterval(updateInactiveTabsList, 3000);
 });
