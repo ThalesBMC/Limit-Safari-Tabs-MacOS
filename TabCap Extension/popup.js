@@ -51,6 +51,7 @@ let settings = {
   inactiveMinutes: 30,
   protectPinned: true,
   protectAudible: true,
+  protectAllowlist: true,
 };
 
 let stats = {
@@ -108,6 +109,8 @@ function initElements() {
     increaseInactive: document.getElementById("increaseInactive"),
     protectPinnedToggle: document.getElementById("protectPinnedToggle"),
     protectAudibleToggle: document.getElementById("protectAudibleToggle"),
+    protectAllowlistToggle: document.getElementById("protectAllowlistToggle"),
+    inactiveClosedStat: document.getElementById("inactiveClosed"),
     inactiveTabsList: document.getElementById("inactiveTabsList"),
     frictionModal: document.getElementById("frictionModal"),
     modalTitle: document.getElementById("modalTitle"),
@@ -212,6 +215,8 @@ function updateUI() {
     elements.protectPinnedToggle.checked = settings.protectPinned;
   if (elements.protectAudibleToggle)
     elements.protectAudibleToggle.checked = settings.protectAudible;
+  if (elements.protectAllowlistToggle)
+    elements.protectAllowlistToggle.checked = settings.protectAllowlist;
 
   // Stats
   if (elements.currentStreak)
@@ -223,6 +228,8 @@ function updateUI() {
     elements.blockedWeek.textContent = stats.blockedWeek;
   if (elements.blockedTotal)
     elements.blockedTotal.textContent = stats.blockedTotal;
+  if (elements.inactiveClosedStat)
+    elements.inactiveClosedStat.textContent = stats.inactiveClosed || 0;
 }
 
 function updateLockUI() {
@@ -550,6 +557,14 @@ function setupEventListeners() {
   if (elements.protectAudibleToggle) {
     elements.protectAudibleToggle.addEventListener("change", async (e) => {
       settings.protectAudible = e.target.checked;
+      await saveSettings();
+    });
+  }
+
+  // Protect allowlist toggle
+  if (elements.protectAllowlistToggle) {
+    elements.protectAllowlistToggle.addEventListener("change", async (e) => {
+      settings.protectAllowlist = e.target.checked;
       await saveSettings();
     });
   }

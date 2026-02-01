@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   inactiveMinutes: 30,
   protectPinned: true,
   protectAudible: true,
+  protectAllowlist: true,
 };
 
 // Default stats
@@ -25,6 +26,7 @@ const DEFAULT_STATS = {
   blockedToday: 0,
   blockedWeek: 0,
   blockedTotal: 0,
+  inactiveClosed: 0,
   lastActiveDate: null,
   lastBlockDate: null,
   weekStartDate: null,
@@ -185,6 +187,14 @@ async function incrementBlocked() {
   stats.lastBlockDate = today;
   stats = updateStreak(stats);
 
+  await saveStats(stats);
+  return stats;
+}
+
+// Increment inactive tabs closed count
+async function incrementInactiveClosed(count = 1) {
+  let stats = await getStats();
+  stats.inactiveClosed = (stats.inactiveClosed || 0) + count;
   await saveStats(stats);
   return stats;
 }
@@ -457,6 +467,10 @@ async function handleTabActivated(activeInfo) {
   tabLastAccessed.set(activeInfo.tabId, Date.now());
   persistTabActivity();
 
+  // Service worker may have just woken up - run inactive check
+  // to catch tabs that expired while worker was suspended
+  checkInactiveTabs().catch(() => {});
+
   try {
     const settings = await getSettings();
     const count = await getCurrentTabCount(activeInfo.windowId, settings);
@@ -501,7 +515,22 @@ async function broadcastTabCount() {
 }
 
 // Persist tab activity to storage (survives service worker restart)
-async function persistTabActivity() {
+// Debounced to avoid excessive writes on rapid tab switches
+let persistTimer = null;
+function persistTabActivity() {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(async () => {
+    try {
+      const data = Object.fromEntries(tabLastAccessed);
+      await browser.storage.local.set({ tabActivity: data });
+    } catch {}
+  }, 2000);
+}
+
+// Force immediate persist (for critical moments like before close)
+async function persistTabActivityNow() {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = null;
   try {
     const data = Object.fromEntries(tabLastAccessed);
     await browser.storage.local.set({ tabActivity: data });
@@ -546,7 +575,27 @@ async function checkInactiveTabs() {
   const now = Date.now();
   const limitMs = settings.inactiveMinutes * 60 * 1000;
 
+  // Handle sleep/wake drift: if any timestamp is in the future
+  // (clock changed) or elapsed is unreasonably large (> 24h beyond limit),
+  // recalibrate those entries to avoid mass-closing after wake
+  for (const [tabId, ts] of tabLastAccessed) {
+    if (ts > now) {
+      // Timestamp in the future - clock was adjusted, reset
+      tabLastAccessed.set(tabId, now);
+    }
+  }
+
   const allTabs = await browser.tabs.query({});
+
+  // Group tabs by window to enforce "keep at least 1 per window"
+  const windowTabs = new Map();
+  for (const tab of allTabs) {
+    if (!windowTabs.has(tab.windowId)) {
+      windowTabs.set(tab.windowId, []);
+    }
+    windowTabs.get(tab.windowId).push(tab);
+  }
+
   const tabsToClose = [];
 
   for (const tab of allTabs) {
@@ -562,6 +611,11 @@ async function checkInactiveTabs() {
     // Protect audible tabs
     if (settings.protectAudible && tab.audible) continue;
 
+    // Protect allowlisted domains
+    if (settings.protectAllowlist && settings.allowlistEnabled && settings.allowlist.length > 0) {
+      if (isUrlAllowed(tab.url, settings.allowlist)) continue;
+    }
+
     const lastAccessed = tabLastAccessed.get(tab.id);
     if (!lastAccessed) {
       // Unknown tab, start tracking now
@@ -571,23 +625,42 @@ async function checkInactiveTabs() {
 
     const elapsed = now - lastAccessed;
     if (elapsed >= limitMs) {
-      tabsToClose.push(tab.id);
+      tabsToClose.push({ id: tab.id, windowId: tab.windowId, elapsed });
     }
   }
 
-  // Close inactive tabs
-  for (const tabId of tabsToClose) {
+  // Sort by elapsed descending (close the oldest-inactive first)
+  tabsToClose.sort((a, b) => b.elapsed - a.elapsed);
+
+  // Track how many tabs remain per window so we never close the last one
+  const windowRemaining = new Map();
+  for (const [windowId, tabs] of windowTabs) {
+    windowRemaining.set(windowId, tabs.length);
+  }
+
+  let closedCount = 0;
+  for (const { id, windowId } of tabsToClose) {
+    // Keep at least 1 tab per window
+    if (windowRemaining.get(windowId) <= 1) {
+      console.log(`TabCap: Skipping inactive tab ${id} (last tab in window)`);
+      continue;
+    }
+
     try {
-      tabLastAccessed.delete(tabId);
-      await browser.tabs.remove(tabId);
-      console.log(`TabCap: Closed inactive tab ${tabId}`);
+      tabLastAccessed.delete(id);
+      await browser.tabs.remove(id);
+      windowRemaining.set(windowId, windowRemaining.get(windowId) - 1);
+      closedCount++;
+      console.log(`TabCap: Closed inactive tab ${id}`);
     } catch (error) {
-      console.log(`TabCap: Error closing inactive tab ${tabId}:`, error);
+      console.log(`TabCap: Error closing inactive tab ${id}:`, error);
     }
   }
 
-  if (tabsToClose.length > 0) {
-    await persistTabActivity();
+  if (closedCount > 0) {
+    // Track stats for inactive closes
+    await incrementInactiveClosed(closedCount);
+    await persistTabActivityNow();
     await broadcastTabCount();
     await updateBadge();
   }
@@ -613,6 +686,11 @@ async function getInactiveTabsInfo() {
     } else if (settings.protectAudible && tab.audible) {
       isProtected = true;
       protectReason = "audible";
+    } else if (settings.protectAllowlist && settings.allowlistEnabled && settings.allowlist.length > 0) {
+      if (isUrlAllowed(tab.url, settings.allowlist)) {
+        isProtected = true;
+        protectReason = "allowlist";
+      }
     }
 
     result.push({
@@ -740,6 +818,9 @@ async function periodicCheck() {
 
   // Setup inactive tab alarm
   await setupInactiveAlarm();
+
+  // Run immediate check for tabs that expired while worker was down
+  await checkInactiveTabs();
 
   // Initialize badge
   await updateBadge();

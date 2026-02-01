@@ -253,9 +253,20 @@
           </div>
 
           <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Protect allowlisted domains</label>
+              <label class="toggle small">
+                <input type="checkbox" id="protectAllowlistToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Allowlisted domains are never auto-closed</p>
+          </div>
+
+          <div class="setting-group">
             <div class="info-box">
               <span class="info-icon">💤</span>
-              <span class="info-text">The active tab is never auto-closed</span>
+              <span class="info-text">Active tab and last tab per window are never auto-closed</span>
             </div>
           </div>
 
@@ -298,6 +309,15 @@
             <div class="stat-card">
               <div class="stat-value" id="blockedTotal">0</div>
               <div class="stat-label">all time</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-section">
+          <div class="stats-grid">
+            <div class="stat-card" style="grid-column: 1 / -1;">
+              <div class="stat-value" id="inactiveClosed">0</div>
+              <div class="stat-label">inactive tabs auto-closed</div>
             </div>
           </div>
         </div>
