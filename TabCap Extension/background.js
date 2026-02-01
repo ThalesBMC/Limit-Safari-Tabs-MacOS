@@ -387,14 +387,17 @@ async function handleTabCreated(tab) {
 // Handler: Tab updated
 // Tracks tabs entering/leaving allowlist and enforces limits
 async function handleTabUpdated(tabId, changeInfo, tab) {
-  if (!changeInfo.url) return;
-  if (!isRealUrl(changeInfo.url)) return;
+  // Safari doesn't always populate changeInfo.url (known bug in older versions).
+  // Use tab.url (3rd param) as fallback when changeInfo.url is unavailable.
+  const url = changeInfo.url || (tab && tab.url);
+  if (!url) return;
+  if (!isRealUrl(url)) return;
 
   const settings = await getSettings();
   if (!settings.enabled) return;
   if (!settings.allowlistEnabled) return;
 
-  const isNowAllowlisted = isUrlAllowed(changeInfo.url, settings.allowlist);
+  const isNowAllowlisted = isUrlAllowed(url, settings.allowlist);
   const wasAllowlisted = allowlistTabs.has(tabId);
 
   // Case 1: Pending tab got its URL
@@ -515,26 +518,34 @@ async function broadcastTabCount() {
 }
 
 // Persist tab activity to storage (survives service worker restart)
-// Debounced to avoid excessive writes on rapid tab switches
+// Debounced to avoid excessive writes on rapid tab switches.
+// Also flushes on every alarm tick (since the debounce setTimeout can be
+// killed if the service worker terminates before it fires).
 let persistTimer = null;
+let persistDirty = false;
 function persistTabActivity() {
+  persistDirty = true;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(async () => {
-    try {
-      const data = Object.fromEntries(tabLastAccessed);
-      await browser.storage.local.set({ tabActivity: data });
-    } catch {}
+    await _flushPersist();
   }, 2000);
 }
 
-// Force immediate persist (for critical moments like before close)
-async function persistTabActivityNow() {
+async function _flushPersist() {
+  if (!persistDirty) return;
+  persistDirty = false;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = null;
   try {
     const data = Object.fromEntries(tabLastAccessed);
     await browser.storage.local.set({ tabActivity: data });
   } catch {}
+}
+
+// Force immediate persist (for critical moments like before close)
+async function persistTabActivityNow() {
+  persistDirty = true;
+  await _flushPersist();
 }
 
 // Restore tab activity from storage on service worker startup
@@ -568,7 +579,29 @@ async function restoreTabActivity() {
 }
 
 // Check and close inactive tabs
-async function checkInactiveTabs() {
+// Guarded by mutex and throttle to prevent concurrent/excessive execution
+let inactiveCheckRunning = false;
+let lastInactiveCheck = 0;
+const INACTIVE_CHECK_THROTTLE = 10000; // 10s minimum between checks
+
+async function checkInactiveTabs(force = false) {
+  // Throttle: skip if checked recently (unless forced by alarm)
+  const now = Date.now();
+  if (!force && now - lastInactiveCheck < INACTIVE_CHECK_THROTTLE) return;
+
+  // Mutex: skip if already running
+  if (inactiveCheckRunning) return;
+  inactiveCheckRunning = true;
+  lastInactiveCheck = now;
+
+  try {
+    await _doInactiveCheck();
+  } finally {
+    inactiveCheckRunning = false;
+  }
+}
+
+async function _doInactiveCheck() {
   const settings = await getSettings();
   if (!settings.inactiveEnabled) return;
 
@@ -576,16 +609,33 @@ async function checkInactiveTabs() {
   const limitMs = settings.inactiveMinutes * 60 * 1000;
 
   // Handle sleep/wake drift: if any timestamp is in the future
-  // (clock changed) or elapsed is unreasonably large (> 24h beyond limit),
-  // recalibrate those entries to avoid mass-closing after wake
+  // (clock changed), recalibrate
   for (const [tabId, ts] of tabLastAccessed) {
     if (ts > now) {
-      // Timestamp in the future - clock was adjusted, reset
       tabLastAccessed.set(tabId, now);
     }
   }
 
   const allTabs = await browser.tabs.query({});
+
+  // Anti mass-close: count how many tabs WOULD be closed.
+  // If > 50% of non-active tabs would close, we've likely just woken
+  // from sleep. Recalibrate all timestamps to give them a fresh timer
+  // instead of closing everything at once.
+  const nonActiveTabs = allTabs.filter((t) => !t.active);
+  let wouldCloseCount = 0;
+  for (const tab of nonActiveTabs) {
+    const ts = tabLastAccessed.get(tab.id);
+    if (ts && (now - ts) >= limitMs) wouldCloseCount++;
+  }
+  if (nonActiveTabs.length > 2 && wouldCloseCount > nonActiveTabs.length * 0.5) {
+    console.log(`TabCap: Sleep/wake detected (${wouldCloseCount}/${nonActiveTabs.length} would close). Recalibrating timers.`);
+    for (const tab of nonActiveTabs) {
+      tabLastAccessed.set(tab.id, now);
+    }
+    await persistTabActivityNow();
+    return;
+  }
 
   // Group tabs by window to enforce "keep at least 1 per window"
   const windowTabs = new Map();
@@ -725,8 +775,15 @@ async function setupInactiveAlarm() {
 
 // Alarm listener
 browser.alarms.onAlarm.addListener(async (alarm) => {
+  // Safety net: flush any dirty persist data on every alarm tick.
+  // This handles the case where the debounce setTimeout was killed
+  // when the service worker was terminated.
+  await _flushPersist();
+
   if (alarm.name === INACTIVE_ALARM_NAME) {
-    await checkInactiveTabs();
+    await checkInactiveTabs(true); // force=true bypasses throttle
+  } else if (alarm.name === "periodicCheck") {
+    await periodicCheck();
   }
 });
 
@@ -825,6 +882,12 @@ async function periodicCheck() {
   // Initialize badge
   await updateBadge();
 
-  // Start periodic consistency check every 2 seconds
-  setInterval(periodicCheck, 2000);
+  // Setup periodic consistency check via alarm (replaces unreliable setInterval)
+  // setInterval dies when the service worker is terminated; alarms survive
+  try {
+    await browser.alarms.create("periodicCheck", { periodInMinutes: 1 });
+  } catch (e) {
+    console.log("TabCap: Could not create periodic alarm, falling back to setInterval");
+    setInterval(periodicCheck, 30000);
+  }
 })();
