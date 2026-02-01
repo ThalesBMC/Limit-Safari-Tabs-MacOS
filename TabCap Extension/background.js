@@ -618,25 +618,6 @@ async function _doInactiveCheck() {
 
   const allTabs = await browser.tabs.query({});
 
-  // Anti mass-close: count how many tabs WOULD be closed.
-  // If > 50% of non-active tabs would close, we've likely just woken
-  // from sleep. Recalibrate all timestamps to give them a fresh timer
-  // instead of closing everything at once.
-  const nonActiveTabs = allTabs.filter((t) => !t.active);
-  let wouldCloseCount = 0;
-  for (const tab of nonActiveTabs) {
-    const ts = tabLastAccessed.get(tab.id);
-    if (ts && (now - ts) >= limitMs) wouldCloseCount++;
-  }
-  if (nonActiveTabs.length > 2 && wouldCloseCount > nonActiveTabs.length * 0.5) {
-    console.log(`TabCap: Sleep/wake detected (${wouldCloseCount}/${nonActiveTabs.length} would close). Recalibrating timers.`);
-    for (const tab of nonActiveTabs) {
-      tabLastAccessed.set(tab.id, now);
-    }
-    await persistTabActivityNow();
-    return;
-  }
-
   // Group tabs by window to enforce "keep at least 1 per window"
   const windowTabs = new Map();
   for (const tab of allTabs) {
