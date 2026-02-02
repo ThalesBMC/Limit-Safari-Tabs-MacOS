@@ -112,7 +112,7 @@ function initElements() {
     blockedTotal: document.getElementById("blockedTotal"),
     inactiveToggle: document.getElementById("inactiveToggle"),
     inactiveSettingsContainer: document.getElementById("inactiveSettingsContainer"),
-    inactiveMinutesValue: document.getElementById("inactiveMinutesValue"),
+    inactiveMinutesInput: document.getElementById("inactiveMinutesInput"),
     decreaseInactive: document.getElementById("decreaseInactive"),
     increaseInactive: document.getElementById("increaseInactive"),
     protectPinnedToggle: document.getElementById("protectPinnedToggle"),
@@ -225,8 +225,8 @@ function updateUI() {
       settings.inactiveEnabled
     );
   }
-  if (elements.inactiveMinutesValue)
-    elements.inactiveMinutesValue.textContent = settings.inactiveMinutes;
+  if (elements.inactiveMinutesInput)
+    elements.inactiveMinutesInput.value = settings.inactiveMinutes;
   if (elements.protectPinnedToggle)
     elements.protectPinnedToggle.checked = settings.protectPinned;
   if (elements.protectAudibleToggle)
@@ -551,6 +551,7 @@ function setupEventListeners() {
   }
 
   // Inactive minutes stepper
+  // Inactive minutes stepper
   if (elements.decreaseInactive) {
     elements.decreaseInactive.addEventListener("click", async () => {
       if (settings.inactiveMinutes > 1) {
@@ -568,6 +569,18 @@ function setupEventListeners() {
         await saveSettings();
         updateUI();
       }
+    });
+  }
+
+  if (elements.inactiveMinutesInput) {
+    elements.inactiveMinutesInput.addEventListener("change", async (e) => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 480) val = 480; // limits max to 8 hours
+      
+      settings.inactiveMinutes = val;
+      await saveSettings();
+      updateUI();
     });
   }
 
@@ -751,6 +764,18 @@ async function updateInactiveTabsList() {
       `;
       elements.inactiveTabsList.appendChild(item);
     });
+
+    // Check if any unprotected tabs have expired (remaining <= 0)
+    // If so, trigger immediate background check to sync visual timer with data
+    const hasExpired = response.tabs.some(t => !t.isProtected && (limitMs - (now - t.lastAccessed)) <= 0);
+    
+    if (hasExpired && settings.inactiveEnabled) {
+      // Throttle checks to avoid spamming message
+      if (!window.lastCheckTrigger || now - window.lastCheckTrigger > 2000) {
+        window.lastCheckTrigger = now;
+        browser.runtime.sendMessage({ type: "CHECK_INACTIVE_TABS" }).catch(() => {});
+      }
+    }
   } catch {}
 }
 

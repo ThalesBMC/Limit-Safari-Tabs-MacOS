@@ -498,13 +498,33 @@ body {
   transform: scale(0.95);
 }
 
-.stepper-value {
-  min-width: 28px;
+.stepper-value,
+.stepper-input {
+  min-width: 40px;
+  width: 40px;
   text-align: center;
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--accent);
   transition: color 0.2s ease;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  padding: 0;
+}
+
+.stepper-input:focus {
+  outline: none;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+/* Hide spin buttons */
+.stepper-input::-webkit-inner-spin-button,
+.stepper-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* Info Box */

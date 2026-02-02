@@ -954,14 +954,18 @@ async function getInactiveTabsInfo() {
   for (const tab of allTabs) {
     if (tab.active) continue;
 
+    // If pinned tabs are protected, hide them from the list entirely
+    // This prevents duplication (one per window) and reduces noise since they won't be closed anyway
+    if (settings.protectPinned && tab.pinned) continue;
+
+    // Filter out internal pages (Start Page, etc) as they are never closed
+    if (isInternalUrl(tab.url)) continue;
+
     const lastAccessed = tabLastAccessed.get(tab.id) || now;
     let isProtected = false;
     let protectReason = "";
 
-    if (settings.protectPinned && tab.pinned) {
-      isProtected = true;
-      protectReason = "pinned";
-    } else if (settings.protectAudible && tab.audible) {
+    if (settings.protectAudible && tab.audible) {
       isProtected = true;
       protectReason = "audible";
     } else if (settings.protectAllowlist && settings.allowlistEnabled && settings.allowlist.length > 0) {
@@ -1045,6 +1049,11 @@ browser.runtime.onMessage.addListener(async (message) => {
 
     case "GET_STATS":
       return await getStats();
+
+    case "CHECK_INACTIVE_TABS":
+      // Allow popup to trigger immediate check/close when it sees tabs at 0s
+      await checkInactiveTabs(true); // force=true to bypass throttle
+      return { success: true };
 
     case "GET_INACTIVE_TABS":
       const inactiveTabs = await getInactiveTabsInfo();
