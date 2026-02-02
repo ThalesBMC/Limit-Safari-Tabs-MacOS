@@ -305,7 +305,13 @@ function renderDomains() {
   settings.allowlist.forEach((domain, index) => {
     const tag = document.createElement("div");
     tag.className = "domain-tag";
-    tag.innerHTML = `<span>${domain}</span><button data-index="${index}">×</button>`;
+    const span = document.createElement("span");
+    span.textContent = domain;
+    const btn = document.createElement("button");
+    btn.dataset.index = index;
+    btn.textContent = "×";
+    tag.appendChild(span);
+    tag.appendChild(btn);
     elements.domainsList.appendChild(tag);
   });
 }
@@ -589,8 +595,9 @@ function setupEventListeners() {
   // Min tabs stepper (range: 0-50, Tab Wrangler allows 0+)
   if (elements.decreaseMinTabs) {
     elements.decreaseMinTabs.addEventListener("click", async () => {
-      if ((settings.minTabs || 0) > 0) {
-        settings.minTabs = (settings.minTabs || 5) - 1;
+      const current = settings.minTabs != null ? settings.minTabs : 5;
+      if (current > 0) {
+        settings.minTabs = current - 1;
         await saveSettings();
         updateUI();
       }
@@ -598,8 +605,9 @@ function setupEventListeners() {
   }
   if (elements.increaseMinTabs) {
     elements.increaseMinTabs.addEventListener("click", async () => {
-      if ((settings.minTabs || 0) < 50) {
-        settings.minTabs = (settings.minTabs || 5) + 1;
+      const current = settings.minTabs != null ? settings.minTabs : 5;
+      if (current < 50) {
+        settings.minTabs = current + 1;
         await saveSettings();
         updateUI();
       }

@@ -43,6 +43,9 @@ const pendingTabs = new Map();
 // When these tabs navigate AWAY from allowlist, we check if over limit and close if needed
 const allowlistTabs = new Set();
 
+// Set of tab IDs recently restored from corral - exempt from tab limit close
+const corralRestoredTabs = new Set();
+
 // Track last-accessed time for each tab (tabId -> timestamp)
 // Safari doesn't support tab.lastAccessed, so we track manually
 const tabLastAccessed = new Map();
@@ -281,7 +284,12 @@ async function restoreFromCorral(index) {
     corral.splice(index, 1);
     await browser.storage.local.set({ tabCorral: corral });
 
-    await browser.tabs.create({ url: entry.url, active: false });
+    const newTab = await browser.tabs.create({ url: entry.url, active: false });
+    // Exempt this tab from being immediately closed by the tab limiter.
+    // Without this, restoring a tab when at the limit (e.g. 3/3) would
+    // trigger handleTabCreated → closeTab, defeating the purpose.
+    corralRestoredTabs.add(newTab.id);
+    setTimeout(() => corralRestoredTabs.delete(newTab.id), 5000);
     return true;
   } catch {
     return false;
@@ -417,6 +425,13 @@ async function handleTabCreated(tab) {
 
   const settings = await getSettings();
   if (!settings.enabled) return;
+
+  // Skip tab limit enforcement for tabs restored from corral
+  if (corralRestoredTabs.has(tab.id)) {
+    console.log(`TabCap: Tab restored from corral, skipping limit check (id: ${tab.id})`);
+    await broadcastTabCount();
+    return;
+  }
 
   // If allowlist is enabled, track allowlisted tabs (even if within limit)
   // This is needed to detect when they leave allowlist later
