@@ -922,8 +922,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-  max-height: 120px;
+  max-height: 180px; /* Restored to full height */
   overflow-y: auto;
+  padding-bottom: 0.5rem; /* Extra padding at bottom */
+}
+
+.inactive-tabs-list.small {
+  max-height: 145px;
 }
 
 .inactive-tab-item {
@@ -950,6 +955,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-right: 0.75rem; /* Prevent text hitting buttons */
 }
 
 .inactive-tab-time {

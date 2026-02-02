@@ -54,9 +54,13 @@ let settings = {
   protectAllowlist: true,
   minTabs: 5,
   corralMax: 100,
+  corralExpireHours: 24,
   debounceOnActivated: true,
   wrangleOption: "exactURLMatch",
 };
+
+// Flag to skip corral update after clearing (prevents race condition)
+let corralJustCleared = false;
 
 let stats = {
   currentStreak: 0,
@@ -121,8 +125,9 @@ function initElements() {
     inactiveTabsList: document.getElementById("inactiveTabsList"),
     corralList: document.getElementById("corralList"),
     clearCorralBtn: document.getElementById("clearCorralBtn"),
-    wrangleOptionSelect: document.getElementById("wrangleOptionSelect"),
-    debounceToggle: document.getElementById("debounceToggle"),
+    debounceValue: document.getElementById("debounceValue"),
+    decreaseDebounce: document.getElementById("decreaseDebounce"),
+    increaseDebounce: document.getElementById("increaseDebounce"),
     frictionModal: document.getElementById("frictionModal"),
     modalTitle: document.getElementById("modalTitle"),
     modalMessage: document.getElementById("modalMessage"),
@@ -230,10 +235,8 @@ function updateUI() {
     elements.protectAllowlistToggle.checked = settings.protectAllowlist;
   if (elements.minTabsValue)
     elements.minTabsValue.textContent = settings.minTabs != null ? settings.minTabs : 5;
-  if (elements.wrangleOptionSelect)
-    elements.wrangleOptionSelect.value = settings.wrangleOption || "exactURLMatch";
-  if (elements.debounceToggle)
-    elements.debounceToggle.checked = settings.debounceOnActivated !== false;
+  if (elements.debounceValue)
+    elements.debounceValue.textContent = settings.debounceDelay != null ? settings.debounceDelay : 1;
 
   // Stats
   if (elements.currentStreak)
@@ -596,7 +599,7 @@ function setupEventListeners() {
   if (elements.decreaseMinTabs) {
     elements.decreaseMinTabs.addEventListener("click", async () => {
       const current = settings.minTabs != null ? settings.minTabs : 5;
-      if (current > 0) {
+      if (current > 1) {
         settings.minTabs = current - 1;
         await saveSettings();
         updateUI();
@@ -614,27 +617,57 @@ function setupEventListeners() {
     });
   }
 
-  // Wrangle option (dedup strategy)
-  if (elements.wrangleOptionSelect) {
-    elements.wrangleOptionSelect.addEventListener("change", async (e) => {
-      settings.wrangleOption = e.target.value;
-      await saveSettings();
+  // Debounce delay stepper
+  if (elements.decreaseDebounce) {
+    elements.decreaseDebounce.addEventListener("click", async () => {
+      const current = settings.debounceDelay != null ? settings.debounceDelay : 1;
+      if (current > 0) {
+        settings.debounceDelay = current - 1;
+        await saveSettings();
+        updateUI();
+      }
     });
   }
 
-  // Debounce on activated toggle
-  if (elements.debounceToggle) {
-    elements.debounceToggle.addEventListener("change", async (e) => {
-      settings.debounceOnActivated = e.target.checked;
-      await saveSettings();
+  if (elements.increaseDebounce) {
+    elements.increaseDebounce.addEventListener("click", async () => {
+      const current = settings.debounceDelay != null ? settings.debounceDelay : 1;
+      if (current < 10) {
+        settings.debounceDelay = current + 1;
+        await saveSettings();
+        updateUI();
+      }
     });
   }
 
-  // Clear corral
+  // Clear recently closed tabs
   if (elements.clearCorralBtn) {
     elements.clearCorralBtn.addEventListener("click", async () => {
-      await browser.runtime.sendMessage({ type: "CLEAR_CORRAL" });
-      await updateCorralList();
+      // Set flag to skip automatic updates (prevents race condition)
+      corralJustCleared = true;
+      
+      // Immediately update UI
+      if (elements.corralList) {
+        elements.corralList.innerHTML = '<p class="setting-hint">No closed tabs</p>';
+      }
+      
+      // Clear in background and verify
+      try {
+        const response = await browser.runtime.sendMessage({ type: "CLEAR_CORRAL" });
+        if (response && response.success) {
+          console.log("TabCap: Corral cleared successfully");
+          // Reset flag after a delay to allow any pending updates to complete
+          setTimeout(() => {
+            corralJustCleared = false;
+          }, 6000);
+        } else {
+          console.error("TabCap: Clear corral failed");
+          // Keep flag on - don't let old data back in
+        }
+      } catch (error) {
+        console.error("TabCap: Error clearing corral:", error);
+        // Keep flag on
+      }
     });
   }
 
@@ -721,9 +754,11 @@ async function updateInactiveTabsList() {
   } catch {}
 }
 
-// Tab Corral list
+// Recently Closed list
 async function updateCorralList() {
   if (!elements.corralList) return;
+  // Skip update if we just cleared (prevents race condition)
+  if (corralJustCleared) return;
   try {
     const response = await browser.runtime.sendMessage({ type: "GET_CORRAL" });
     if (!response || !response.tabs || response.tabs.length === 0) {

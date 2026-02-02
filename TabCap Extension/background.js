@@ -19,7 +19,8 @@ const DEFAULT_SETTINGS = {
   protectAllowlist: true,
   minTabs: 5,
   corralMax: 100,
-  debounceOnActivated: true, // Wait 1s before resetting timer (Tab Wrangler pattern)
+  corralExpireHours: 24, // Auto-delete closed tabs after this many hours (0 = never)
+  debounceDelay: 1, // Wait X seconds before resetting timer (0 = instant)
   wrangleOption: "exactURLMatch", // "withDupes", "exactURLMatch", "hostnameAndTitleMatch"
 };
 
@@ -297,7 +298,46 @@ async function restoreFromCorral(index) {
 }
 
 async function clearCorral() {
-  await browser.storage.local.set({ tabCorral: [] });
+  try {
+    // Use remove() instead of set() for complete deletion
+    // Safari storage can be finicky with set({ key: [] })
+    await browser.storage.local.remove("tabCorral");
+    console.log("TabCap: Corral cleared successfully");
+    return true;
+  } catch (error) {
+    console.error("TabCap: Error clearing corral:", error);
+    return false;
+  }
+}
+
+// Clean expired tabs from corral based on corralExpireHours setting
+async function cleanExpiredCorral() {
+  try {
+    const settings = await getSettings();
+    const expireHours = settings.corralExpireHours;
+    
+    // If 0, never expire
+    if (!expireHours || expireHours <= 0) return;
+    
+    const result = await browser.storage.local.get("tabCorral");
+    const corral = result.tabCorral || [];
+    if (corral.length === 0) return;
+    
+    const now = Date.now();
+    const expireMs = expireHours * 60 * 60 * 1000;
+    
+    const filtered = corral.filter(tab => {
+      const age = now - (tab.closedAt || 0);
+      return age < expireMs;
+    });
+    
+    if (filtered.length !== corral.length) {
+      await browser.storage.local.set({ tabCorral: filtered });
+      console.log(`TabCap: Cleaned ${corral.length - filtered.length} expired tabs from corral`);
+    }
+  } catch (error) {
+    console.error("TabCap: Error cleaning expired corral:", error);
+  }
 }
 
 // Count tabs in a specific window (excluding allowlisted if enabled)
@@ -419,9 +459,8 @@ async function checkPendingTab(tabId) {
 // Handler: New tab created
 // RULE: We ONLY close the NEW tab, NEVER existing tabs
 async function handleTabCreated(tab) {
-  // Track creation time for inactive tab feature
-  tabLastAccessed.set(tab.id, Date.now());
-  persistTabActivity();
+  // NOTE: We don't set tabLastAccessed here - it will be set by handleTabActivated
+  // after the debounce period. This ensures quick tab-switches don't reset timers.
 
   const settings = await getSettings();
   if (!settings.enabled) return;
@@ -578,7 +617,10 @@ async function handleTabRemoved(tabId) {
 async function handleTabActivated(activeInfo) {
   const settings = await getSettings();
 
-  if (settings.debounceOnActivated) {
+  const delay = settings.debounceDelay != null ? settings.debounceDelay : 1;
+  const delayMs = delay * 1000;
+
+  if (delay > 0) {
     // Cancel previous debounce if user switched away quickly
     if (activatedDebounceTimer) {
       clearTimeout(activatedDebounceTimer);
@@ -593,7 +635,7 @@ async function handleTabActivated(activeInfo) {
       }
       activatedDebounceTimer = null;
       activatedDebounceTabId = null;
-    }, 1000);
+    }, delayMs);
   } else {
     tabLastAccessed.set(activeInfo.tabId, Date.now());
     persistTabActivity();
@@ -624,6 +666,28 @@ async function handleTabAttached(tabId, attachInfo) {
 
 // Handler: Tab detached from window (moving to another window/group)
 async function handleTabDetached(tabId, detachInfo) {
+  await broadcastTabCount();
+}
+
+// Handler: Window focus changed (user switched between Safari windows)
+async function handleWindowFocusChanged(windowId) {
+  // windowId is -1 when all windows lose focus (Safari goes to background)
+  if (windowId === browser.windows.WINDOW_ID_NONE) return;
+  
+  // Service worker woke up - check inactive tabs
+  checkInactiveTabs().catch(() => {});
+  await broadcastTabCount();
+}
+
+// Handler: New window created
+async function handleWindowCreated(window) {
+  checkInactiveTabs().catch(() => {});
+  await broadcastTabCount();
+}
+
+// Handler: Window removed/closed
+async function handleWindowRemoved(windowId) {
+  checkInactiveTabs().catch(() => {});
   await broadcastTabCount();
 }
 
@@ -710,7 +774,7 @@ async function restoreTabActivity() {
 // Guarded by mutex and throttle to prevent concurrent/excessive execution
 let inactiveCheckRunning = false;
 let lastInactiveCheck = 0;
-const INACTIVE_CHECK_THROTTLE = 10000; // 10s minimum between checks
+const INACTIVE_CHECK_THROTTLE = 2000; // 2s minimum between checks (was 10s)
 
 async function checkInactiveTabs(force = false) {
   // Throttle: skip if checked recently (unless forced by alarm)
@@ -759,9 +823,12 @@ async function _doInactiveCheck() {
   const tabsToClose = [];
 
   for (const tab of allTabs) {
-    // Never close the active tab - refresh its timestamp
+    // Never close the active tab
+    // Only refresh timestamp if no debounce is pending for this tab
     if (tab.active) {
-      tabLastAccessed.set(tab.id, now);
+      if (activatedDebounceTabId !== tab.id) {
+        tabLastAccessed.set(tab.id, now);
+      }
       continue;
     }
 
@@ -827,32 +894,50 @@ async function _doInactiveCheck() {
     return windowRemaining.get(windowId) > minTabs;
   });
 
-  // Limit how many we close per window: don't go below minTabs
-  const closedTabs = [];
+  // Determine which tabs we can actually close (respect minTabs per window)
+  const tabsToActuallyClose = [];
   for (const { id, windowId } of eligibleToClose) {
     if (windowRemaining.get(windowId) <= minTabs) {
       // Reset timestamp for tabs we can't close yet
       tabLastAccessed.set(id, now);
       continue;
     }
-
-    try {
-      // Save tab info to corral before closing
-      const tab = allTabs.find((t) => t.id === id);
-      if (tab) closedTabs.push(tab);
-
-      tabLastAccessed.delete(id);
-      await browser.tabs.remove(id);
-      windowRemaining.set(windowId, windowRemaining.get(windowId) - 1);
-      console.log(`TabCap: Closed inactive tab ${id}`);
-    } catch (error) {
-      console.log(`TabCap: Error closing inactive tab ${id}:`, error);
-    }
+    
+    // Save tab info to corral before closing
+    const tab = allTabs.find((t) => t.id === id);
+    if (tab) tabsToActuallyClose.push({ id, windowId, tab });
+    
+    // Pre-decrement to calculate correctly for subsequent tabs in same window
+    windowRemaining.set(windowId, windowRemaining.get(windowId) - 1);
   }
 
-  if (closedTabs.length > 0) {
+  // Close all eligible tabs in parallel for instant bulk close
+  if (tabsToActuallyClose.length > 0) {
+    const closedTabs = tabsToActuallyClose.map(({ tab }) => tab);
+    
+    // Clean up tracking first
+    for (const { id } of tabsToActuallyClose) {
+      tabLastAccessed.delete(id);
+    }
+    
+    // Close all tabs in parallel
+    const closePromises = tabsToActuallyClose.map(async ({ id }) => {
+      try {
+        await browser.tabs.remove(id);
+        return { id, success: true };
+      } catch (error) {
+        console.log(`TabCap: Error closing inactive tab ${id}:`, error);
+        return { id, success: false };
+      }
+    });
+    
+    const results = await Promise.all(closePromises);
+    const successCount = results.filter(r => r.success).length;
+    console.log(`TabCap: Closed ${successCount} inactive tabs at once`);
+    
+    // Save to corral and update stats
     await addToCorral(closedTabs);
-    await incrementInactiveClosed(closedTabs.length);
+    await incrementInactiveClosed(successCount);
     await persistTabActivityNow();
     await broadcastTabCount();
     await updateBadge();
@@ -927,6 +1012,7 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
     await checkInactiveTabs(true); // force=true bypasses throttle
   } else if (alarm.name === "periodicCheck") {
     await periodicCheck();
+    await cleanExpiredCorral(); // Clean old tabs from corral
   }
 });
 
@@ -972,9 +1058,10 @@ browser.runtime.onMessage.addListener(async (message) => {
       return { success: restored };
     }
 
-    case "CLEAR_CORRAL":
-      await clearCorral();
-      return { success: true };
+    case "CLEAR_CORRAL": {
+      const success = await clearCorral();
+      return { success };
+    }
 
     case "GET_TAB_COUNT":
       try {
@@ -1003,6 +1090,11 @@ browser.tabs.onActivated.addListener(handleTabActivated);
 browser.tabs.onMoved.addListener(handleTabMoved);
 browser.tabs.onAttached.addListener(handleTabAttached);
 browser.tabs.onDetached.addListener(handleTabDetached);
+
+// Window listeners - help wake up service worker more frequently
+browser.windows.onFocusChanged.addListener(handleWindowFocusChanged);
+browser.windows.onCreated.addListener(handleWindowCreated);
+browser.windows.onRemoved.addListener(handleWindowRemoved);
 
 // Periodic consistency check - broadcasts count to popup
 async function periodicCheck() {
