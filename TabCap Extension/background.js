@@ -17,8 +17,11 @@ const DEFAULT_SETTINGS = {
   protectPinned: true,
   protectAudible: true,
   protectAllowlist: true,
-  minTabs: 1,
-  corralMax: 50,
+  minTabs: 5,
+  corralMax: 100,
+  debounceOnActivated: true, // Wait 1s before resetting timer (Tab Wrangler pattern)
+  wrangleOption: "exactURLMatch", // "withDupes", "exactURLMatch", "hostnameAndTitleMatch"
+  showCorralBadge: false, // Show closed tab count on badge
 };
 
 // Default stats
@@ -47,6 +50,10 @@ const tabLastAccessed = new Map();
 
 const INACTIVE_ALARM_NAME = "inactiveTabCheck";
 
+// Debounce timer for onActivated (Tab Wrangler pattern: 1s delay)
+let activatedDebounceTimer = null;
+let activatedDebounceTabId = null;
+
 // How long to wait for URL before closing (ms)
 const PENDING_TIMEOUT = 300;
 
@@ -54,32 +61,39 @@ const PENDING_TIMEOUT = 300;
 async function updateBadge() {
   try {
     const settings = await getSettings();
-    
+
+    // If corral badge mode is on, show corral count instead
+    if (settings.showCorralBadge) {
+      const corral = await getCorral();
+      await updateCorralBadge(corral.length);
+      return;
+    }
+
     // Show "OFF" when disabled
     if (!settings.enabled) {
       await browser.action.setBadgeText({ text: "OFF" });
       await browser.action.setBadgeBackgroundColor({ color: "#737373" });
       return;
     }
-    
+
     // Get current tab count
     const [activeTab] = await browser.tabs.query({
       active: true,
       currentWindow: true,
     });
-    
+
     if (!activeTab) {
       await browser.action.setBadgeText({ text: "" });
       return;
     }
-    
+
     const count = await getCurrentTabCount(activeTab.windowId, settings);
     const max = settings.maxTabs;
     const ratio = count / max;
-    
+
     // Set badge text as "X/Y"
     await browser.action.setBadgeText({ text: `${count}/${max}` });
-    
+
     // Color based on proximity to limit
     let color;
     if (count >= max) {
@@ -89,7 +103,7 @@ async function updateBadge() {
     } else {
       color = "#22c55e"; // Green - below 70%
     }
-    
+
     await browser.action.setBadgeBackgroundColor({ color });
   } catch (error) {
     console.log("TabCap: Badge update error:", error);
@@ -202,16 +216,31 @@ async function incrementInactiveClosed(count = 1) {
 }
 
 // Tab Corral: save closed tabs so the user can re-open them
+// Supports Tab Wrangler dedup options: withDupes, exactURLMatch, hostnameAndTitleMatch
 async function addToCorral(tabs) {
   try {
     const settings = await getSettings();
     const result = await browser.storage.local.get("tabCorral");
     const corral = result.tabCorral || [];
+    const wrangleOption = settings.wrangleOption || "exactURLMatch";
 
     for (const tab of tabs) {
-      // Deduplicate by URL: if same URL exists, remove old entry
-      const existingIdx = corral.findIndex((t) => t.url === tab.url);
-      if (existingIdx > -1) corral.splice(existingIdx, 1);
+      // Deduplicate based on wrangleOption (Tab Wrangler pattern)
+      if (wrangleOption === "exactURLMatch") {
+        const existingIdx = corral.findIndex((t) => t.url === tab.url);
+        if (existingIdx > -1) corral.splice(existingIdx, 1);
+      } else if (wrangleOption === "hostnameAndTitleMatch") {
+        try {
+          const tabHostname = new URL(tab.url).hostname;
+          const existingIdx = corral.findIndex((t) => {
+            try {
+              return new URL(t.url).hostname === tabHostname && t.title === (tab.title || "Untitled");
+            } catch { return false; }
+          });
+          if (existingIdx > -1) corral.splice(existingIdx, 1);
+        } catch {}
+      }
+      // "withDupes" - no dedup
 
       corral.unshift({
         url: tab.url || "",
@@ -222,11 +251,38 @@ async function addToCorral(tabs) {
     }
 
     // Trim to max size
-    const max = settings.corralMax || 50;
+    const max = settings.corralMax || 100;
     if (corral.length > max) corral.length = max;
 
     await browser.storage.local.set({ tabCorral: corral });
+
+    // Update badge if showCorralBadge is enabled
+    if (settings.showCorralBadge) {
+      await updateCorralBadge(corral.length);
+    }
   } catch {}
+}
+
+// Update badge to show corral count (Tab Wrangler pattern)
+async function updateCorralBadge(count) {
+  try {
+    const settings = await getSettings();
+    if (!settings.showCorralBadge) return;
+    await browser.action.setBadgeText({ text: count > 0 ? String(count) : "" });
+    await browser.action.setBadgeBackgroundColor({ color: "#8b5cf6" });
+  } catch {}
+}
+
+// Check if URL is an internal/special page that should never be closed
+function isInternalUrl(url) {
+  if (!url) return true;
+  if (url === "about:blank" || url === "about:newtab") return true;
+  if (url.startsWith("about:")) return true;
+  if (url.startsWith("safari-resource:")) return true;
+  if (url.startsWith("safari-web-extension:")) return true;
+  if (url.startsWith("favorites://")) return true;
+  if (url.startsWith("chrome://")) return true;
+  return false;
 }
 
 async function getCorral() {
@@ -525,17 +581,37 @@ async function handleTabRemoved(tabId) {
 }
 
 // Handler: Tab activated (window/tab group changed)
+// Tab Wrangler pattern: debounceOnActivated - only reset timer after tab is
+// active for 1 second. Prevents rapid tab-switching from resetting all timers.
 async function handleTabActivated(activeInfo) {
-  // Track last accessed time for inactive tab feature
-  tabLastAccessed.set(activeInfo.tabId, Date.now());
-  persistTabActivity();
+  const settings = await getSettings();
+
+  if (settings.debounceOnActivated) {
+    // Cancel previous debounce if user switched away quickly
+    if (activatedDebounceTimer) {
+      clearTimeout(activatedDebounceTimer);
+      activatedDebounceTimer = null;
+    }
+    activatedDebounceTabId = activeInfo.tabId;
+    activatedDebounceTimer = setTimeout(() => {
+      // Only update if this tab is still the one being debounced
+      if (activatedDebounceTabId === activeInfo.tabId) {
+        tabLastAccessed.set(activeInfo.tabId, Date.now());
+        persistTabActivity();
+      }
+      activatedDebounceTimer = null;
+      activatedDebounceTabId = null;
+    }, 1000);
+  } else {
+    tabLastAccessed.set(activeInfo.tabId, Date.now());
+    persistTabActivity();
+  }
 
   // Service worker may have just woken up - run inactive check
   // to catch tabs that expired while worker was suspended
   checkInactiveTabs().catch(() => {});
 
   try {
-    const settings = await getSettings();
     const count = await getCurrentTabCount(activeInfo.windowId, settings);
     browser.runtime
       .sendMessage({ type: "TAB_COUNT_UPDATED", count })
@@ -687,12 +763,18 @@ async function _doInactiveCheck() {
     windowTabs.get(tab.windowId).push(tab);
   }
 
-  const minTabs = Math.max(1, settings.minTabs || 1);
+  const minTabs = Math.max(0, settings.minTabs != null ? settings.minTabs : 5);
   const tabsToClose = [];
 
   for (const tab of allTabs) {
     // Never close the active tab - refresh its timestamp
     if (tab.active) {
+      tabLastAccessed.set(tab.id, now);
+      continue;
+    }
+
+    // Never close internal/special pages (Tab Wrangler: about:, chrome://)
+    if (isInternalUrl(tab.url)) {
       tabLastAccessed.set(tab.id, now);
       continue;
     }
@@ -862,11 +944,35 @@ browser.runtime.onMessage.addListener(async (message) => {
     case "GET_SETTINGS":
       return await getSettings();
 
-    case "SAVE_SETTINGS":
-      await saveSettings(message.settings);
+    case "SAVE_SETTINGS": {
+      // Tab Wrangler pattern: reset all timers when inactivity time changes
+      const oldSettings = await getSettings();
+      const newSettings = message.settings;
+      await saveSettings(newSettings);
+
+      if (oldSettings.inactiveMinutes !== newSettings.inactiveMinutes) {
+        const now = Date.now();
+        for (const tabId of tabLastAccessed.keys()) {
+          tabLastAccessed.set(tabId, now);
+        }
+        await persistTabActivityNow();
+        console.log("TabCap: Timer reset - inactivity time changed");
+      }
+
       await updateBadge();
       await setupInactiveAlarm();
+
+      // Update corral badge if setting changed
+      if (newSettings.showCorralBadge) {
+        const corral = await getCorral();
+        await updateCorralBadge(corral.length);
+      } else if (oldSettings.showCorralBadge && !newSettings.showCorralBadge) {
+        // Turned off - restore normal badge
+        await updateBadge();
+      }
+
       return { success: true };
+    }
 
     case "GET_STATS":
       return await getStats();
@@ -878,12 +984,20 @@ browser.runtime.onMessage.addListener(async (message) => {
     case "GET_CORRAL":
       return { tabs: await getCorral() };
 
-    case "RESTORE_FROM_CORRAL":
+    case "RESTORE_FROM_CORRAL": {
       const restored = await restoreFromCorral(message.index);
+      const restSettings = await getSettings();
+      if (restSettings.showCorralBadge) {
+        const corral = await getCorral();
+        await updateCorralBadge(corral.length);
+      }
       return { success: restored };
+    }
 
     case "CLEAR_CORRAL":
       await clearCorral();
+      const clrSettings = await getSettings();
+      if (clrSettings.showCorralBadge) await updateCorralBadge(0);
       return { success: true };
 
     case "GET_TAB_COUNT":

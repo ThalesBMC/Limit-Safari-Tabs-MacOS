@@ -52,8 +52,11 @@ let settings = {
   protectPinned: true,
   protectAudible: true,
   protectAllowlist: true,
-  minTabs: 1,
-  corralMax: 50,
+  minTabs: 5,
+  corralMax: 100,
+  debounceOnActivated: true,
+  wrangleOption: "exactURLMatch",
+  showCorralBadge: false,
 };
 
 let stats = {
@@ -119,6 +122,9 @@ function initElements() {
     inactiveTabsList: document.getElementById("inactiveTabsList"),
     corralList: document.getElementById("corralList"),
     clearCorralBtn: document.getElementById("clearCorralBtn"),
+    wrangleOptionSelect: document.getElementById("wrangleOptionSelect"),
+    debounceToggle: document.getElementById("debounceToggle"),
+    corralBadgeToggle: document.getElementById("corralBadgeToggle"),
     frictionModal: document.getElementById("frictionModal"),
     modalTitle: document.getElementById("modalTitle"),
     modalMessage: document.getElementById("modalMessage"),
@@ -225,7 +231,13 @@ function updateUI() {
   if (elements.protectAllowlistToggle)
     elements.protectAllowlistToggle.checked = settings.protectAllowlist;
   if (elements.minTabsValue)
-    elements.minTabsValue.textContent = settings.minTabs || 1;
+    elements.minTabsValue.textContent = settings.minTabs != null ? settings.minTabs : 5;
+  if (elements.wrangleOptionSelect)
+    elements.wrangleOptionSelect.value = settings.wrangleOption || "exactURLMatch";
+  if (elements.debounceToggle)
+    elements.debounceToggle.checked = settings.debounceOnActivated !== false;
+  if (elements.corralBadgeToggle)
+    elements.corralBadgeToggle.checked = settings.showCorralBadge || false;
 
   // Stats
   if (elements.currentStreak)
@@ -578,11 +590,11 @@ function setupEventListeners() {
     });
   }
 
-  // Min tabs stepper
+  // Min tabs stepper (range: 0-50, Tab Wrangler allows 0+)
   if (elements.decreaseMinTabs) {
     elements.decreaseMinTabs.addEventListener("click", async () => {
-      if ((settings.minTabs || 1) > 1) {
-        settings.minTabs = (settings.minTabs || 1) - 1;
+      if ((settings.minTabs || 0) > 0) {
+        settings.minTabs = (settings.minTabs || 5) - 1;
         await saveSettings();
         updateUI();
       }
@@ -590,11 +602,35 @@ function setupEventListeners() {
   }
   if (elements.increaseMinTabs) {
     elements.increaseMinTabs.addEventListener("click", async () => {
-      if ((settings.minTabs || 1) < 20) {
-        settings.minTabs = (settings.minTabs || 1) + 1;
+      if ((settings.minTabs || 0) < 50) {
+        settings.minTabs = (settings.minTabs || 5) + 1;
         await saveSettings();
         updateUI();
       }
+    });
+  }
+
+  // Wrangle option (dedup strategy)
+  if (elements.wrangleOptionSelect) {
+    elements.wrangleOptionSelect.addEventListener("change", async (e) => {
+      settings.wrangleOption = e.target.value;
+      await saveSettings();
+    });
+  }
+
+  // Debounce on activated toggle
+  if (elements.debounceToggle) {
+    elements.debounceToggle.addEventListener("change", async (e) => {
+      settings.debounceOnActivated = e.target.checked;
+      await saveSettings();
+    });
+  }
+
+  // Corral badge toggle
+  if (elements.corralBadgeToggle) {
+    elements.corralBadgeToggle.addEventListener("change", async (e) => {
+      settings.showCorralBadge = e.target.checked;
+      await saveSettings();
     });
   }
 
@@ -702,12 +738,14 @@ async function updateCorralList() {
     elements.corralList.innerHTML = "";
     response.tabs.forEach((tab, index) => {
       const ago = formatTimeAgo(tab.closedAt);
+      let domain = "";
+      try { domain = new URL(tab.url).hostname.replace(/^www\./, ""); } catch {}
       const item = document.createElement("div");
       item.className = "inactive-tab-item";
       item.innerHTML = `
         <div class="inactive-tab-info">
           <span class="inactive-tab-title">${escapeHtml(tab.title || "Untitled")}</span>
-          <span class="inactive-tab-time">${ago}</span>
+          <span class="inactive-tab-time">${domain ? escapeHtml(domain) + " · " : ""}${ago}</span>
         </div>
         <button class="btn-small" data-corral-index="${index}" style="font-size: 0.625rem; padding: 0.25rem 0.5rem;">Restore</button>
       `;

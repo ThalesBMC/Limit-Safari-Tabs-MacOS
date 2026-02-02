@@ -267,16 +267,48 @@
             <label class="setting-label">Minimum tabs per window</label>
             <div class="stepper">
               <button class="stepper-btn" id="decreaseMinTabs">−</button>
-              <span class="stepper-value" id="minTabsValue">1</span>
+              <span class="stepper-value" id="minTabsValue">5</span>
               <button class="stepper-btn" id="increaseMinTabs">+</button>
             </div>
             <p class="setting-hint">Won't close below this threshold</p>
           </div>
 
           <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Debounce activation</label>
+              <label class="toggle small">
+                <input type="checkbox" id="debounceToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Wait 1s before resetting inactivity timer</p>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Duplicate handling</label>
+            <select id="wrangleOptionSelect" class="select-input">
+              <option value="exactURLMatch">Remove exact URL duplicates</option>
+              <option value="hostnameAndTitleMatch">Remove same domain + title</option>
+              <option value="withDupes">Keep all duplicates</option>
+            </select>
+            <p class="setting-hint">How closed tabs are stored in the corral</p>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Show corral count on badge</label>
+              <label class="toggle small">
+                <input type="checkbox" id="corralBadgeToggle" />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Display closed tab count on extension icon</p>
+          </div>
+
+          <div class="setting-group">
             <div class="info-box">
               <span class="info-icon">💤</span>
-              <span class="info-text">Active tab is never auto-closed</span>
+              <span class="info-text">Active tab and internal pages are never closed</span>
             </div>
           </div>
 
