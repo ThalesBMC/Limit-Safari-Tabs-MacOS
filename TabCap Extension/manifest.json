@@ -20,6 +20,6 @@
       "128": "images/icon-128.png"
     }
   },
-  "permissions": ["tabs", "storage"],
+  "permissions": ["tabs", "storage", "alarms"],
   "web_accessible_resources": []
 }

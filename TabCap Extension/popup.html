@@ -57,6 +57,7 @@
       <!-- Navigation Tabs -->
       <nav class="tabs">
         <button class="tab active" data-tab="settings">Settings</button>
+        <button class="tab" data-tab="inactive">Inactive</button>
         <button class="tab" data-tab="stats">Stats</button>
       </nav>
 
@@ -205,6 +206,109 @@
         </div>
       </main>
 
+      <!-- Inactive Tab -->
+      <main class="main tab-content" id="inactive-tab">
+        <div class="setting-group">
+          <div class="setting-header">
+            <label class="setting-label">Auto-close inactive tabs</label>
+            <label class="toggle small">
+              <input type="checkbox" id="inactiveToggle" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p class="setting-hint">Close tabs that haven't been used in a while</p>
+        </div>
+
+        <div class="inactive-settings" id="inactiveSettingsContainer">
+          <div class="setting-group">
+            <label class="setting-label">Close after (minutes)</label>
+            <div class="stepper" id="inactiveStepper">
+              <button class="stepper-btn" id="decreaseInactive">−</button>
+              <input type="number" class="stepper-input" id="inactiveMinutesInput" value="30" min="1">
+              <button class="stepper-btn" id="increaseInactive">+</button>
+            </div>
+            <p class="setting-hint">Minimum: 1 min</p>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Minimum tabs per window</label>
+            <div class="stepper">
+              <button class="stepper-btn" id="decreaseMinTabs">−</button>
+              <span class="stepper-value" id="minTabsValue">5</span>
+              <button class="stepper-btn" id="increaseMinTabs">+</button>
+            </div>
+            <p class="setting-hint">Won't close below this threshold</p>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Activation delay (seconds)</label>
+            <div class="stepper">
+              <button class="stepper-btn" id="decreaseDebounce">−</button>
+              <span class="stepper-value" id="debounceValue">1</span>
+              <button class="stepper-btn" id="increaseDebounce">+</button>
+            </div>
+            <p class="setting-hint">Wait before resetting inactivity timer (0 = instant)</p>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Protect pinned tabs</label>
+              <label class="toggle small">
+                <input type="checkbox" id="protectPinnedToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Pinned tabs are never auto-closed</p>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Protect audible tabs</label>
+              <label class="toggle small">
+                <input type="checkbox" id="protectAudibleToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Tabs playing audio are never auto-closed</p>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Protect allowlisted domains</label>
+              <label class="toggle small">
+                <input type="checkbox" id="protectAllowlistToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <p class="setting-hint">Allowlisted domains are never auto-closed</p>
+          </div>
+
+          <div class="setting-group">
+            <div class="info-box">
+              <span class="info-icon">💤</span>
+              <span class="info-text">Active tab and system pages are never closed</span>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <label class="setting-label">Tracked tabs</label>
+            <div class="inactive-tabs-list small" id="inactiveTabsList">
+              <p class="setting-hint">No tracked tabs</p>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-header" style="margin-bottom: 0.5rem;">
+              <label class="setting-label">Recently closed</label>
+              <button class="btn-small" id="clearCorralBtn" style="font-size: 0.625rem; padding: 0.25rem 0.5rem; margin-right: 0.5rem;">Clear</button>
+            </div>
+            <div class="inactive-tabs-list" id="corralList">
+              <p class="setting-hint">No closed tabs</p>
+            </div>
+          </div>
+        </div>
+      </main>
+
       <!-- Stats Tab -->
       <main class="main tab-content" id="stats-tab">
         <div class="stats-hero">
@@ -235,6 +339,15 @@
             <div class="stat-card">
               <div class="stat-value" id="blockedTotal">0</div>
               <div class="stat-label">all time</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-section">
+          <div class="stats-grid">
+            <div class="stat-card" style="grid-column: 1 / -1;">
+              <div class="stat-value" id="inactiveClosed">0</div>
+              <div class="stat-label">inactive tabs auto-closed</div>
             </div>
           </div>
         </div>

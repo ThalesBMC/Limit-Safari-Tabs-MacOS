@@ -47,7 +47,20 @@ let settings = {
   allowlistEnabled: false,
   allowlist: [],
   tabLimitLocked: false,
+  inactiveEnabled: false,
+  inactiveMinutes: 30,
+  protectPinned: true,
+  protectAudible: true,
+  protectAllowlist: true,
+  minTabs: 5,
+  corralMax: 100,
+  corralExpireHours: 24,
+  debounceOnActivated: true,
+  wrangleOption: "exactURLMatch",
 };
+
+// Flag to skip corral update after clearing (prevents race condition)
+let corralJustCleared = false;
 
 let stats = {
   currentStreak: 0,
@@ -97,6 +110,24 @@ function initElements() {
     blockedToday: document.getElementById("blockedToday"),
     blockedWeek: document.getElementById("blockedWeek"),
     blockedTotal: document.getElementById("blockedTotal"),
+    inactiveToggle: document.getElementById("inactiveToggle"),
+    inactiveSettingsContainer: document.getElementById("inactiveSettingsContainer"),
+    inactiveMinutesInput: document.getElementById("inactiveMinutesInput"),
+    decreaseInactive: document.getElementById("decreaseInactive"),
+    increaseInactive: document.getElementById("increaseInactive"),
+    protectPinnedToggle: document.getElementById("protectPinnedToggle"),
+    protectAudibleToggle: document.getElementById("protectAudibleToggle"),
+    protectAllowlistToggle: document.getElementById("protectAllowlistToggle"),
+    inactiveClosedStat: document.getElementById("inactiveClosed"),
+    minTabsValue: document.getElementById("minTabsValue"),
+    decreaseMinTabs: document.getElementById("decreaseMinTabs"),
+    increaseMinTabs: document.getElementById("increaseMinTabs"),
+    inactiveTabsList: document.getElementById("inactiveTabsList"),
+    corralList: document.getElementById("corralList"),
+    clearCorralBtn: document.getElementById("clearCorralBtn"),
+    debounceValue: document.getElementById("debounceValue"),
+    decreaseDebounce: document.getElementById("decreaseDebounce"),
+    increaseDebounce: document.getElementById("increaseDebounce"),
     frictionModal: document.getElementById("frictionModal"),
     modalTitle: document.getElementById("modalTitle"),
     modalMessage: document.getElementById("modalMessage"),
@@ -185,6 +216,28 @@ function updateUI() {
   }
   renderDomains();
 
+  // Inactive tabs
+  if (elements.inactiveToggle)
+    elements.inactiveToggle.checked = settings.inactiveEnabled;
+  if (elements.inactiveSettingsContainer) {
+    elements.inactiveSettingsContainer.classList.toggle(
+      "enabled",
+      settings.inactiveEnabled
+    );
+  }
+  if (elements.inactiveMinutesInput)
+    elements.inactiveMinutesInput.value = settings.inactiveMinutes;
+  if (elements.protectPinnedToggle)
+    elements.protectPinnedToggle.checked = settings.protectPinned;
+  if (elements.protectAudibleToggle)
+    elements.protectAudibleToggle.checked = settings.protectAudible;
+  if (elements.protectAllowlistToggle)
+    elements.protectAllowlistToggle.checked = settings.protectAllowlist;
+  if (elements.minTabsValue)
+    elements.minTabsValue.textContent = settings.minTabs != null ? settings.minTabs : 5;
+  if (elements.debounceValue)
+    elements.debounceValue.textContent = settings.debounceDelay != null ? settings.debounceDelay : 1;
+
   // Stats
   if (elements.currentStreak)
     elements.currentStreak.textContent = stats.currentStreak;
@@ -195,6 +248,8 @@ function updateUI() {
     elements.blockedWeek.textContent = stats.blockedWeek;
   if (elements.blockedTotal)
     elements.blockedTotal.textContent = stats.blockedTotal;
+  if (elements.inactiveClosedStat)
+    elements.inactiveClosedStat.textContent = stats.inactiveClosed || 0;
 }
 
 function updateLockUI() {
@@ -253,7 +308,13 @@ function renderDomains() {
   settings.allowlist.forEach((domain, index) => {
     const tag = document.createElement("div");
     tag.className = "domain-tag";
-    tag.innerHTML = `<span>${domain}</span><button data-index="${index}">×</button>`;
+    const span = document.createElement("span");
+    span.textContent = domain;
+    const btn = document.createElement("button");
+    btn.dataset.index = index;
+    btn.textContent = "×";
+    tag.appendChild(span);
+    tag.appendChild(btn);
     elements.domainsList.appendChild(tag);
   });
 }
@@ -480,6 +541,161 @@ function setupEventListeners() {
     });
   }
 
+  // Inactive tabs toggle
+  if (elements.inactiveToggle) {
+    elements.inactiveToggle.addEventListener("change", async (e) => {
+      settings.inactiveEnabled = e.target.checked;
+      await saveSettings();
+      updateUI();
+    });
+  }
+
+  // Inactive minutes stepper
+  // Inactive minutes stepper
+  if (elements.decreaseInactive) {
+    elements.decreaseInactive.addEventListener("click", async () => {
+      if (settings.inactiveMinutes > 1) {
+        settings.inactiveMinutes = Math.max(1, settings.inactiveMinutes - (settings.inactiveMinutes <= 5 ? 1 : 5));
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+
+  if (elements.increaseInactive) {
+    elements.increaseInactive.addEventListener("click", async () => {
+      if (settings.inactiveMinutes < 480) {
+        settings.inactiveMinutes += settings.inactiveMinutes < 5 ? 1 : 5;
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+
+  if (elements.inactiveMinutesInput) {
+    elements.inactiveMinutesInput.addEventListener("change", async (e) => {
+      let val = parseInt(e.target.value);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 480) val = 480; // limits max to 8 hours
+      
+      settings.inactiveMinutes = val;
+      await saveSettings();
+      updateUI();
+    });
+  }
+
+  // Protect pinned toggle
+  if (elements.protectPinnedToggle) {
+    elements.protectPinnedToggle.addEventListener("change", async (e) => {
+      settings.protectPinned = e.target.checked;
+      await saveSettings();
+    });
+  }
+
+  // Protect audible toggle
+  if (elements.protectAudibleToggle) {
+    elements.protectAudibleToggle.addEventListener("change", async (e) => {
+      settings.protectAudible = e.target.checked;
+      await saveSettings();
+    });
+  }
+
+  // Protect allowlist toggle
+  if (elements.protectAllowlistToggle) {
+    elements.protectAllowlistToggle.addEventListener("change", async (e) => {
+      settings.protectAllowlist = e.target.checked;
+      await saveSettings();
+    });
+  }
+
+  // Min tabs stepper (range: 0-50, Tab Wrangler allows 0+)
+  if (elements.decreaseMinTabs) {
+    elements.decreaseMinTabs.addEventListener("click", async () => {
+      const current = settings.minTabs != null ? settings.minTabs : 5;
+      if (current > 1) {
+        settings.minTabs = current - 1;
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+  if (elements.increaseMinTabs) {
+    elements.increaseMinTabs.addEventListener("click", async () => {
+      const current = settings.minTabs != null ? settings.minTabs : 5;
+      if (current < 50) {
+        settings.minTabs = current + 1;
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+
+  // Debounce delay stepper
+  if (elements.decreaseDebounce) {
+    elements.decreaseDebounce.addEventListener("click", async () => {
+      const current = settings.debounceDelay != null ? settings.debounceDelay : 1;
+      if (current > 0) {
+        settings.debounceDelay = current - 1;
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+
+  if (elements.increaseDebounce) {
+    elements.increaseDebounce.addEventListener("click", async () => {
+      const current = settings.debounceDelay != null ? settings.debounceDelay : 1;
+      if (current < 10) {
+        settings.debounceDelay = current + 1;
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+
+  // Clear recently closed tabs
+  if (elements.clearCorralBtn) {
+    elements.clearCorralBtn.addEventListener("click", async () => {
+      // Set flag to skip automatic updates (prevents race condition)
+      corralJustCleared = true;
+      
+      // Immediately update UI
+      if (elements.corralList) {
+        elements.corralList.innerHTML = '<p class="setting-hint">No closed tabs</p>';
+      }
+      
+      // Clear in background and verify
+      try {
+        const response = await browser.runtime.sendMessage({ type: "CLEAR_CORRAL" });
+        if (response && response.success) {
+          console.log("TabCap: Corral cleared successfully");
+          // Reset flag after a delay to allow any pending updates to complete
+          setTimeout(() => {
+            corralJustCleared = false;
+          }, 6000);
+        } else {
+          console.error("TabCap: Clear corral failed");
+          // Keep flag on - don't let old data back in
+        }
+      } catch (error) {
+        console.error("TabCap: Error clearing corral:", error);
+        // Keep flag on
+      }
+    });
+  }
+
+  // Corral restore (delegated click)
+  if (elements.corralList) {
+    elements.corralList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-corral-index]");
+      if (btn) {
+        const index = parseInt(btn.dataset.corralIndex);
+        await browser.runtime.sendMessage({ type: "RESTORE_FROM_CORRAL", index });
+        await updateCorralList();
+      }
+    });
+  }
+
   // Modal
   if (elements.modalCancel)
     elements.modalCancel.addEventListener("click", hideFrictionModal);
@@ -502,6 +718,115 @@ function setupEventListeners() {
   }
 }
 
+// Inactive tabs list
+async function updateInactiveTabsList() {
+  if (!elements.inactiveTabsList) return;
+  try {
+    const response = await browser.runtime.sendMessage({ type: "GET_INACTIVE_TABS" });
+    if (!response || !response.tabs || response.tabs.length === 0) {
+      elements.inactiveTabsList.innerHTML = '<p class="setting-hint">No tracked tabs</p>';
+      return;
+    }
+
+    const now = Date.now();
+    const limitMs = settings.inactiveMinutes * 60 * 1000;
+
+    elements.inactiveTabsList.innerHTML = "";
+    response.tabs.forEach((tab) => {
+      const elapsed = now - tab.lastAccessed;
+      const remaining = Math.max(0, limitMs - elapsed);
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+
+      const ratio = elapsed / limitMs;
+      let badgeClass, badgeText;
+      if (tab.isProtected) {
+        badgeClass = "protected";
+        badgeText = tab.protectReason;
+      } else if (ratio >= 0.9) {
+        badgeClass = "danger";
+        badgeText = `${mins}m ${secs}s`;
+      } else if (ratio >= 0.6) {
+        badgeClass = "warning";
+        badgeText = `${mins}m ${secs}s`;
+      } else {
+        badgeClass = "safe";
+        badgeText = `${mins}m ${secs}s`;
+      }
+
+      const item = document.createElement("div");
+      item.className = "inactive-tab-item";
+      item.innerHTML = `
+        <div class="inactive-tab-info">
+          <span class="inactive-tab-title">${escapeHtml(tab.title || "Untitled")}</span>
+        </div>
+        <span class="inactive-tab-badge ${badgeClass}">${badgeText}</span>
+      `;
+      elements.inactiveTabsList.appendChild(item);
+    });
+
+    // Check if any unprotected tabs have expired (remaining <= 0)
+    // If so, trigger immediate background check to sync visual timer with data
+    const hasExpired = response.tabs.some(t => !t.isProtected && (limitMs - (now - t.lastAccessed)) <= 0);
+    
+    if (hasExpired && settings.inactiveEnabled) {
+      // Throttle checks to avoid spamming message
+      if (!window.lastCheckTrigger || now - window.lastCheckTrigger > 2000) {
+        window.lastCheckTrigger = now;
+        browser.runtime.sendMessage({ type: "CHECK_INACTIVE_TABS" }).catch(() => {});
+      }
+    }
+  } catch {}
+}
+
+// Recently Closed list
+async function updateCorralList() {
+  if (!elements.corralList) return;
+  // Skip update if we just cleared (prevents race condition)
+  if (corralJustCleared) return;
+  try {
+    const response = await browser.runtime.sendMessage({ type: "GET_CORRAL" });
+    if (!response || !response.tabs || response.tabs.length === 0) {
+      elements.corralList.innerHTML = '<p class="setting-hint">No closed tabs</p>';
+      return;
+    }
+
+    elements.corralList.innerHTML = "";
+    response.tabs.forEach((tab, index) => {
+      const ago = formatTimeAgo(tab.closedAt);
+      let domain = "";
+      try { domain = new URL(tab.url).hostname.replace(/^www\./, ""); } catch {}
+      const item = document.createElement("div");
+      item.className = "inactive-tab-item";
+      item.innerHTML = `
+        <div class="inactive-tab-info">
+          <span class="inactive-tab-title">${escapeHtml(tab.title || "Untitled")}</span>
+          <span class="inactive-tab-time">${domain ? escapeHtml(domain) + " · " : ""}${ago}</span>
+        </div>
+        <button class="btn-small" data-corral-index="${index}" style="font-size: 0.625rem; padding: 0.25rem 0.5rem;">Restore</button>
+      `;
+      elements.corralList.appendChild(item);
+    });
+  } catch {}
+}
+
+function formatTimeAgo(timestamp) {
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // Initialize
 document.addEventListener("DOMContentLoaded", async () => {
   initElements();
@@ -510,5 +835,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateUI();
   await updateTabCount();
   setupEventListeners();
+  await updateInactiveTabsList();
+  await updateCorralList();
   setInterval(updateTabCount, 1000);
+  setInterval(updateInactiveTabsList, 3000);
+  setInterval(updateCorralList, 5000);
 });
