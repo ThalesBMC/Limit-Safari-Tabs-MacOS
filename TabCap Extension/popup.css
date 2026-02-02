@@ -310,6 +310,10 @@ body {
   margin-top: 1rem;
 }
 
+#inactive-tab .setting-group:first-child {
+  margin-top: 0;
+}
+
 .setting-header {
   display: flex;
   align-items: center;
