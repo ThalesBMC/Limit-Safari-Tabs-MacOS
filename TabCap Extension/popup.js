@@ -56,7 +56,6 @@ let settings = {
   corralMax: 100,
   debounceOnActivated: true,
   wrangleOption: "exactURLMatch",
-  showCorralBadge: false,
 };
 
 let stats = {
@@ -124,7 +123,6 @@ function initElements() {
     clearCorralBtn: document.getElementById("clearCorralBtn"),
     wrangleOptionSelect: document.getElementById("wrangleOptionSelect"),
     debounceToggle: document.getElementById("debounceToggle"),
-    corralBadgeToggle: document.getElementById("corralBadgeToggle"),
     frictionModal: document.getElementById("frictionModal"),
     modalTitle: document.getElementById("modalTitle"),
     modalMessage: document.getElementById("modalMessage"),
@@ -236,8 +234,6 @@ function updateUI() {
     elements.wrangleOptionSelect.value = settings.wrangleOption || "exactURLMatch";
   if (elements.debounceToggle)
     elements.debounceToggle.checked = settings.debounceOnActivated !== false;
-  if (elements.corralBadgeToggle)
-    elements.corralBadgeToggle.checked = settings.showCorralBadge || false;
 
   // Stats
   if (elements.currentStreak)
@@ -622,14 +618,6 @@ function setupEventListeners() {
   if (elements.debounceToggle) {
     elements.debounceToggle.addEventListener("change", async (e) => {
       settings.debounceOnActivated = e.target.checked;
-      await saveSettings();
-    });
-  }
-
-  // Corral badge toggle
-  if (elements.corralBadgeToggle) {
-    elements.corralBadgeToggle.addEventListener("change", async (e) => {
-      settings.showCorralBadge = e.target.checked;
       await saveSettings();
     });
   }

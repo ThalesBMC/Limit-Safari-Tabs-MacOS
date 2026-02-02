@@ -21,7 +21,6 @@ const DEFAULT_SETTINGS = {
   corralMax: 100,
   debounceOnActivated: true, // Wait 1s before resetting timer (Tab Wrangler pattern)
   wrangleOption: "exactURLMatch", // "withDupes", "exactURLMatch", "hostnameAndTitleMatch"
-  showCorralBadge: false, // Show closed tab count on badge
 };
 
 // Default stats
@@ -61,13 +60,6 @@ const PENDING_TIMEOUT = 300;
 async function updateBadge() {
   try {
     const settings = await getSettings();
-
-    // If corral badge mode is on, show corral count instead
-    if (settings.showCorralBadge) {
-      const corral = await getCorral();
-      await updateCorralBadge(corral.length);
-      return;
-    }
 
     // Show "OFF" when disabled
     if (!settings.enabled) {
@@ -255,21 +247,6 @@ async function addToCorral(tabs) {
     if (corral.length > max) corral.length = max;
 
     await browser.storage.local.set({ tabCorral: corral });
-
-    // Update badge if showCorralBadge is enabled
-    if (settings.showCorralBadge) {
-      await updateCorralBadge(corral.length);
-    }
-  } catch {}
-}
-
-// Update badge to show corral count (Tab Wrangler pattern)
-async function updateCorralBadge(count) {
-  try {
-    const settings = await getSettings();
-    if (!settings.showCorralBadge) return;
-    await browser.action.setBadgeText({ text: count > 0 ? String(count) : "" });
-    await browser.action.setBadgeBackgroundColor({ color: "#8b5cf6" });
   } catch {}
 }
 
@@ -962,15 +939,6 @@ browser.runtime.onMessage.addListener(async (message) => {
       await updateBadge();
       await setupInactiveAlarm();
 
-      // Update corral badge if setting changed
-      if (newSettings.showCorralBadge) {
-        const corral = await getCorral();
-        await updateCorralBadge(corral.length);
-      } else if (oldSettings.showCorralBadge && !newSettings.showCorralBadge) {
-        // Turned off - restore normal badge
-        await updateBadge();
-      }
-
       return { success: true };
     }
 
@@ -986,18 +954,11 @@ browser.runtime.onMessage.addListener(async (message) => {
 
     case "RESTORE_FROM_CORRAL": {
       const restored = await restoreFromCorral(message.index);
-      const restSettings = await getSettings();
-      if (restSettings.showCorralBadge) {
-        const corral = await getCorral();
-        await updateCorralBadge(corral.length);
-      }
       return { success: restored };
     }
 
     case "CLEAR_CORRAL":
       await clearCorral();
-      const clrSettings = await getSettings();
-      if (clrSettings.showCorralBadge) await updateCorralBadge(0);
       return { success: true };
 
     case "GET_TAB_COUNT":
