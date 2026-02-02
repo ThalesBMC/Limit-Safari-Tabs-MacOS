@@ -17,6 +17,8 @@ const DEFAULT_SETTINGS = {
   protectPinned: true,
   protectAudible: true,
   protectAllowlist: true,
+  minTabs: 1,
+  corralMax: 50,
 };
 
 // Default stats
@@ -197,6 +199,64 @@ async function incrementInactiveClosed(count = 1) {
   stats.inactiveClosed = (stats.inactiveClosed || 0) + count;
   await saveStats(stats);
   return stats;
+}
+
+// Tab Corral: save closed tabs so the user can re-open them
+async function addToCorral(tabs) {
+  try {
+    const settings = await getSettings();
+    const result = await browser.storage.local.get("tabCorral");
+    const corral = result.tabCorral || [];
+
+    for (const tab of tabs) {
+      // Deduplicate by URL: if same URL exists, remove old entry
+      const existingIdx = corral.findIndex((t) => t.url === tab.url);
+      if (existingIdx > -1) corral.splice(existingIdx, 1);
+
+      corral.unshift({
+        url: tab.url || "",
+        title: tab.title || "Untitled",
+        favIconUrl: tab.favIconUrl || "",
+        closedAt: Date.now(),
+      });
+    }
+
+    // Trim to max size
+    const max = settings.corralMax || 50;
+    if (corral.length > max) corral.length = max;
+
+    await browser.storage.local.set({ tabCorral: corral });
+  } catch {}
+}
+
+async function getCorral() {
+  try {
+    const result = await browser.storage.local.get("tabCorral");
+    return result.tabCorral || [];
+  } catch {
+    return [];
+  }
+}
+
+async function restoreFromCorral(index) {
+  try {
+    const result = await browser.storage.local.get("tabCorral");
+    const corral = result.tabCorral || [];
+    if (index < 0 || index >= corral.length) return false;
+
+    const entry = corral[index];
+    corral.splice(index, 1);
+    await browser.storage.local.set({ tabCorral: corral });
+
+    await browser.tabs.create({ url: entry.url, active: false });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function clearCorral() {
+  await browser.storage.local.set({ tabCorral: [] });
 }
 
 // Count tabs in a specific window (excluding allowlisted if enabled)
@@ -627,29 +687,36 @@ async function _doInactiveCheck() {
     windowTabs.get(tab.windowId).push(tab);
   }
 
+  const minTabs = Math.max(1, settings.minTabs || 1);
   const tabsToClose = [];
 
   for (const tab of allTabs) {
-    // Never close the active tab
+    // Never close the active tab - refresh its timestamp
     if (tab.active) {
       tabLastAccessed.set(tab.id, now);
       continue;
     }
 
-    // Protect pinned tabs
-    if (settings.protectPinned && tab.pinned) continue;
-
-    // Protect audible tabs
-    if (settings.protectAudible && tab.audible) continue;
-
-    // Protect allowlisted domains
+    // Protected tabs: refresh timestamp (like Tab Wrangler) instead of
+    // just skipping. This prevents them from accumulating stale timestamps
+    // that would cause immediate close if protection is later disabled.
+    if (settings.protectPinned && tab.pinned) {
+      tabLastAccessed.set(tab.id, now);
+      continue;
+    }
+    if (settings.protectAudible && tab.audible) {
+      tabLastAccessed.set(tab.id, now);
+      continue;
+    }
     if (settings.protectAllowlist && settings.allowlistEnabled && settings.allowlist.length > 0) {
-      if (isUrlAllowed(tab.url, settings.allowlist)) continue;
+      if (isUrlAllowed(tab.url, settings.allowlist)) {
+        tabLastAccessed.set(tab.id, now);
+        continue;
+      }
     }
 
     const lastAccessed = tabLastAccessed.get(tab.id);
     if (!lastAccessed) {
-      // Unknown tab, start tracking now
       tabLastAccessed.set(tab.id, now);
       continue;
     }
@@ -663,34 +730,55 @@ async function _doInactiveCheck() {
   // Sort by elapsed descending (close the oldest-inactive first)
   tabsToClose.sort((a, b) => b.elapsed - a.elapsed);
 
-  // Track how many tabs remain per window so we never close the last one
+  // Track how many tabs remain per window
   const windowRemaining = new Map();
   for (const [windowId, tabs] of windowTabs) {
     windowRemaining.set(windowId, tabs.length);
   }
 
-  let closedCount = 0;
-  for (const { id, windowId } of tabsToClose) {
-    // Keep at least 1 tab per window
-    if (windowRemaining.get(windowId) <= 1) {
-      console.log(`TabCap: Skipping inactive tab ${id} (last tab in window)`);
+  // minTabs check: if a window is already at or below minTabs,
+  // reset all its candidates' timestamps (Tab Wrangler pattern).
+  // This gives them a fresh timer instead of closing immediately
+  // when a new tab arrives.
+  for (const [windowId, tabs] of windowTabs) {
+    if (tabs.length <= minTabs) {
+      for (const tab of tabs) {
+        tabLastAccessed.set(tab.id, now);
+      }
+    }
+  }
+
+  // Filter out candidates from windows already at minTabs
+  const eligibleToClose = tabsToClose.filter(({ windowId }) => {
+    return windowRemaining.get(windowId) > minTabs;
+  });
+
+  // Limit how many we close per window: don't go below minTabs
+  const closedTabs = [];
+  for (const { id, windowId } of eligibleToClose) {
+    if (windowRemaining.get(windowId) <= minTabs) {
+      // Reset timestamp for tabs we can't close yet
+      tabLastAccessed.set(id, now);
       continue;
     }
 
     try {
+      // Save tab info to corral before closing
+      const tab = allTabs.find((t) => t.id === id);
+      if (tab) closedTabs.push(tab);
+
       tabLastAccessed.delete(id);
       await browser.tabs.remove(id);
       windowRemaining.set(windowId, windowRemaining.get(windowId) - 1);
-      closedCount++;
       console.log(`TabCap: Closed inactive tab ${id}`);
     } catch (error) {
       console.log(`TabCap: Error closing inactive tab ${id}:`, error);
     }
   }
 
-  if (closedCount > 0) {
-    // Track stats for inactive closes
-    await incrementInactiveClosed(closedCount);
+  if (closedTabs.length > 0) {
+    await addToCorral(closedTabs);
+    await incrementInactiveClosed(closedTabs.length);
     await persistTabActivityNow();
     await broadcastTabCount();
     await updateBadge();
@@ -786,6 +874,17 @@ browser.runtime.onMessage.addListener(async (message) => {
     case "GET_INACTIVE_TABS":
       const inactiveTabs = await getInactiveTabsInfo();
       return { tabs: inactiveTabs };
+
+    case "GET_CORRAL":
+      return { tabs: await getCorral() };
+
+    case "RESTORE_FROM_CORRAL":
+      const restored = await restoreFromCorral(message.index);
+      return { success: restored };
+
+    case "CLEAR_CORRAL":
+      await clearCorral();
+      return { success: true };
 
     case "GET_TAB_COUNT":
       try {

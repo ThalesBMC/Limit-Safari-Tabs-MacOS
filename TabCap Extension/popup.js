@@ -52,6 +52,8 @@ let settings = {
   protectPinned: true,
   protectAudible: true,
   protectAllowlist: true,
+  minTabs: 1,
+  corralMax: 50,
 };
 
 let stats = {
@@ -111,7 +113,12 @@ function initElements() {
     protectAudibleToggle: document.getElementById("protectAudibleToggle"),
     protectAllowlistToggle: document.getElementById("protectAllowlistToggle"),
     inactiveClosedStat: document.getElementById("inactiveClosed"),
+    minTabsValue: document.getElementById("minTabsValue"),
+    decreaseMinTabs: document.getElementById("decreaseMinTabs"),
+    increaseMinTabs: document.getElementById("increaseMinTabs"),
     inactiveTabsList: document.getElementById("inactiveTabsList"),
+    corralList: document.getElementById("corralList"),
+    clearCorralBtn: document.getElementById("clearCorralBtn"),
     frictionModal: document.getElementById("frictionModal"),
     modalTitle: document.getElementById("modalTitle"),
     modalMessage: document.getElementById("modalMessage"),
@@ -217,6 +224,8 @@ function updateUI() {
     elements.protectAudibleToggle.checked = settings.protectAudible;
   if (elements.protectAllowlistToggle)
     elements.protectAllowlistToggle.checked = settings.protectAllowlist;
+  if (elements.minTabsValue)
+    elements.minTabsValue.textContent = settings.minTabs || 1;
 
   // Stats
   if (elements.currentStreak)
@@ -569,6 +578,46 @@ function setupEventListeners() {
     });
   }
 
+  // Min tabs stepper
+  if (elements.decreaseMinTabs) {
+    elements.decreaseMinTabs.addEventListener("click", async () => {
+      if ((settings.minTabs || 1) > 1) {
+        settings.minTabs = (settings.minTabs || 1) - 1;
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+  if (elements.increaseMinTabs) {
+    elements.increaseMinTabs.addEventListener("click", async () => {
+      if ((settings.minTabs || 1) < 20) {
+        settings.minTabs = (settings.minTabs || 1) + 1;
+        await saveSettings();
+        updateUI();
+      }
+    });
+  }
+
+  // Clear corral
+  if (elements.clearCorralBtn) {
+    elements.clearCorralBtn.addEventListener("click", async () => {
+      await browser.runtime.sendMessage({ type: "CLEAR_CORRAL" });
+      await updateCorralList();
+    });
+  }
+
+  // Corral restore (delegated click)
+  if (elements.corralList) {
+    elements.corralList.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-corral-index]");
+      if (btn) {
+        const index = parseInt(btn.dataset.corralIndex);
+        await browser.runtime.sendMessage({ type: "RESTORE_FROM_CORRAL", index });
+        await updateCorralList();
+      }
+    });
+  }
+
   // Modal
   if (elements.modalCancel)
     elements.modalCancel.addEventListener("click", hideFrictionModal);
@@ -640,6 +689,44 @@ async function updateInactiveTabsList() {
   } catch {}
 }
 
+// Tab Corral list
+async function updateCorralList() {
+  if (!elements.corralList) return;
+  try {
+    const response = await browser.runtime.sendMessage({ type: "GET_CORRAL" });
+    if (!response || !response.tabs || response.tabs.length === 0) {
+      elements.corralList.innerHTML = '<p class="setting-hint">No closed tabs</p>';
+      return;
+    }
+
+    elements.corralList.innerHTML = "";
+    response.tabs.forEach((tab, index) => {
+      const ago = formatTimeAgo(tab.closedAt);
+      const item = document.createElement("div");
+      item.className = "inactive-tab-item";
+      item.innerHTML = `
+        <div class="inactive-tab-info">
+          <span class="inactive-tab-title">${escapeHtml(tab.title || "Untitled")}</span>
+          <span class="inactive-tab-time">${ago}</span>
+        </div>
+        <button class="btn-small" data-corral-index="${index}" style="font-size: 0.625rem; padding: 0.25rem 0.5rem;">Restore</button>
+      `;
+      elements.corralList.appendChild(item);
+    });
+  } catch {}
+}
+
+function formatTimeAgo(timestamp) {
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
@@ -655,6 +742,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   await updateTabCount();
   setupEventListeners();
   await updateInactiveTabsList();
+  await updateCorralList();
   setInterval(updateTabCount, 1000);
   setInterval(updateInactiveTabsList, 3000);
+  setInterval(updateCorralList, 5000);
 });

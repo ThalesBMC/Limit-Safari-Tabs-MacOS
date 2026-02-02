@@ -264,9 +264,19 @@
           </div>
 
           <div class="setting-group">
+            <label class="setting-label">Minimum tabs per window</label>
+            <div class="stepper">
+              <button class="stepper-btn" id="decreaseMinTabs">−</button>
+              <span class="stepper-value" id="minTabsValue">1</span>
+              <button class="stepper-btn" id="increaseMinTabs">+</button>
+            </div>
+            <p class="setting-hint">Won't close below this threshold</p>
+          </div>
+
+          <div class="setting-group">
             <div class="info-box">
               <span class="info-icon">💤</span>
-              <span class="info-text">Active tab and last tab per window are never auto-closed</span>
+              <span class="info-text">Active tab is never auto-closed</span>
             </div>
           </div>
 
@@ -274,6 +284,17 @@
             <label class="setting-label">Tracked tabs</label>
             <div class="inactive-tabs-list" id="inactiveTabsList">
               <p class="setting-hint">No tracked tabs</p>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <div class="setting-header">
+              <label class="setting-label">Tab Corral</label>
+              <button class="btn-small" id="clearCorralBtn" style="font-size: 0.625rem; padding: 0.25rem 0.5rem;">Clear</button>
+            </div>
+            <p class="setting-hint">Closed tabs you can restore</p>
+            <div class="inactive-tabs-list" id="corralList">
+              <p class="setting-hint">No closed tabs</p>
             </div>
           </div>
         </div>
