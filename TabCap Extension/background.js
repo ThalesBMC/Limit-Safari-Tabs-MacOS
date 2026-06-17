@@ -53,6 +53,12 @@ const tabLastAccessed = new Map();
 
 const INACTIVE_ALARM_NAME = "inactiveTabCheck";
 
+// Initialization gate: alarm/event handlers must wait for restoreTabActivity()
+// to complete before running checkInactiveTabs(). Without this, the alarm
+// handler races with the async IIFE and sees an empty tabLastAccessed map.
+let initPromise = null;
+let initResolved = false;
+
 // Debounce timer for onActivated (Tab Wrangler pattern: 1s delay)
 let activatedDebounceTimer = null;
 let activatedDebounceTabId = null;
@@ -459,8 +465,20 @@ async function checkPendingTab(tabId) {
 // Handler: New tab created
 // RULE: We ONLY close the NEW tab, NEVER existing tabs
 async function handleTabCreated(tab) {
-  // NOTE: We don't set tabLastAccessed here - it will be set by handleTabActivated
-  // after the debounce period. This ensures quick tab-switches don't reset timers.
+  if (!initResolved && initPromise) {
+    await initPromise;
+  }
+
+  // Start inactivity tracking at creation time. Background-opened tabs may never
+  // fire onActivated, so waiting for activation makes auto-close depend on the popup.
+  tabLastAccessed.set(tab.id, Date.now());
+  await persistTabActivityNow();
+
+  // Service worker just woke up - check for expired inactive tabs.
+  // This is important because if handleTabCreated closes the new tab immediately
+  // (over limit), handleTabActivated may never fire, so checkInactiveTabs
+  // wouldn't be triggered by the activation path.
+  checkInactiveTabs().catch(() => {});
 
   const settings = await getSettings();
   if (!settings.enabled) return;
@@ -539,6 +557,9 @@ async function handleTabUpdated(tabId, changeInfo, tab) {
   const url = changeInfo.url || (tab && tab.url);
   if (!url) return;
   if (!isRealUrl(url)) return;
+
+  // Opportunistic inactive tab check while the service worker is awake
+  checkInactiveTabs().catch(() => {});
 
   const settings = await getSettings();
   if (!settings.enabled) return;
@@ -766,7 +787,7 @@ async function restoreTabActivity() {
       }
     }
 
-    await persistTabActivity();
+    await persistTabActivityNow();
   } catch {}
 }
 
@@ -777,6 +798,15 @@ let lastInactiveCheck = 0;
 const INACTIVE_CHECK_THROTTLE = 2000; // 2s minimum between checks (was 10s)
 
 async function checkInactiveTabs(force = false) {
+  // Wait for initialization (restoreTabActivity) to complete before checking.
+  // Without this, alarm/event handlers race with the async IIFE: the handler
+  // fires while tabLastAccessed is still empty, sets every tab to "now",
+  // and nothing ever gets closed. The IIFE's own checkInactiveTabs() call
+  // then gets throttled, so correct timestamps are never evaluated.
+  if (!initResolved && initPromise) {
+    await initPromise;
+  }
+
   // Throttle: skip if checked recently (unless forced by alarm)
   const now = Date.now();
   if (!force && now - lastInactiveCheck < INACTIVE_CHECK_THROTTLE) return;
@@ -797,14 +827,21 @@ async function _doInactiveCheck() {
   const settings = await getSettings();
   if (!settings.inactiveEnabled) return;
 
+  // Guard: inactiveMinutes must be at least 1. A value of 0 would make
+  // elapsed >= 0 always true, closing all non-active tabs instantly.
+  // The UI enforces min=1, but corrupted storage could bypass it.
+  const inactiveMinutes = Math.max(1, settings.inactiveMinutes || 1);
+
   const now = Date.now();
-  const limitMs = settings.inactiveMinutes * 60 * 1000;
+  const limitMs = inactiveMinutes * 60 * 1000;
 
   // Handle sleep/wake drift: if any timestamp is in the future
   // (clock changed), recalibrate
+  let activityChanged = false;
   for (const [tabId, ts] of tabLastAccessed) {
     if (ts > now) {
       tabLastAccessed.set(tabId, now);
+      activityChanged = true;
     }
   }
 
@@ -828,6 +865,7 @@ async function _doInactiveCheck() {
     if (tab.active) {
       if (activatedDebounceTabId !== tab.id) {
         tabLastAccessed.set(tab.id, now);
+        activityChanged = true;
       }
       continue;
     }
@@ -835,6 +873,7 @@ async function _doInactiveCheck() {
     // Never close internal/special pages (Tab Wrangler: about:, chrome://)
     if (isInternalUrl(tab.url)) {
       tabLastAccessed.set(tab.id, now);
+      activityChanged = true;
       continue;
     }
 
@@ -843,15 +882,18 @@ async function _doInactiveCheck() {
     // that would cause immediate close if protection is later disabled.
     if (settings.protectPinned && tab.pinned) {
       tabLastAccessed.set(tab.id, now);
+      activityChanged = true;
       continue;
     }
     if (settings.protectAudible && tab.audible) {
       tabLastAccessed.set(tab.id, now);
+      activityChanged = true;
       continue;
     }
     if (settings.protectAllowlist && settings.allowlistEnabled && settings.allowlist.length > 0) {
       if (isUrlAllowed(tab.url, settings.allowlist)) {
         tabLastAccessed.set(tab.id, now);
+        activityChanged = true;
         continue;
       }
     }
@@ -859,6 +901,7 @@ async function _doInactiveCheck() {
     const lastAccessed = tabLastAccessed.get(tab.id);
     if (!lastAccessed) {
       tabLastAccessed.set(tab.id, now);
+      activityChanged = true;
       continue;
     }
 
@@ -885,6 +928,7 @@ async function _doInactiveCheck() {
     if (tabs.length <= minTabs) {
       for (const tab of tabs) {
         tabLastAccessed.set(tab.id, now);
+        activityChanged = true;
       }
     }
   }
@@ -900,6 +944,7 @@ async function _doInactiveCheck() {
     if (windowRemaining.get(windowId) <= minTabs) {
       // Reset timestamp for tabs we can't close yet
       tabLastAccessed.set(id, now);
+      activityChanged = true;
       continue;
     }
     
@@ -941,6 +986,8 @@ async function _doInactiveCheck() {
     await persistTabActivityNow();
     await broadcastTabCount();
     await updateBadge();
+  } else if (activityChanged) {
+    await persistTabActivityNow();
   }
 }
 
@@ -1012,9 +1059,15 @@ browser.alarms.onAlarm.addListener(async (alarm) => {
   // when the service worker was terminated.
   await _flushPersist();
 
-  if (alarm.name === INACTIVE_ALARM_NAME) {
-    await checkInactiveTabs(true); // force=true bypasses throttle
-  } else if (alarm.name === "periodicCheck") {
+  // Always check inactive tabs on ANY alarm tick. This is critical because:
+  // 1. Safari may coalesce the two 1-minute alarms and only fire one
+  // 2. checkInactiveTabs internally checks settings.inactiveEnabled, so
+  //    it self-gates correctly without depending on which alarm fired
+  // 3. The inactiveTabCheck alarm only exists when inactiveEnabled=true,
+  //    but periodicCheck always exists - we need both paths to work
+  await checkInactiveTabs(true);
+
+  if (alarm.name === "periodicCheck") {
     await periodicCheck();
     await cleanExpiredCorral(); // Clean old tabs from corral
   }
@@ -1032,13 +1085,20 @@ browser.runtime.onMessage.addListener(async (message) => {
       const newSettings = message.settings;
       await saveSettings(newSettings);
 
-      if (oldSettings.inactiveMinutes !== newSettings.inactiveMinutes) {
+      // Reset all inactivity timestamps when:
+      // 1. inactiveMinutes changed (Tab Wrangler pattern)
+      // 2. inactiveEnabled just turned ON - without this, tabs that have been
+      //    idle for hours get immediately closed on the very first check,
+      //    because handleTabActivated tracks timestamps even when disabled.
+      const minutesChanged = oldSettings.inactiveMinutes !== newSettings.inactiveMinutes;
+      const justEnabled = !oldSettings.inactiveEnabled && newSettings.inactiveEnabled;
+      if (minutesChanged || justEnabled) {
         const now = Date.now();
         for (const tabId of tabLastAccessed.keys()) {
           tabLastAccessed.set(tabId, now);
         }
         await persistTabActivityNow();
-        console.log("TabCap: Timer reset - inactivity time changed");
+        console.log(`TabCap: Timer reset - ${justEnabled ? "inactive closing enabled" : "inactivity time changed"}`);
       }
 
       await updateBadge();
@@ -1111,6 +1171,11 @@ async function periodicCheck() {
     const settings = await getSettings();
     if (!settings.enabled) return;
 
+    // NOTE: checkInactiveTabs is called by the alarm handler itself (for
+    // ALL alarms), so we don't call it here. This avoids gating it behind
+    // settings.enabled, since inactive tab closing is controlled by its
+    // own settings.inactiveEnabled flag.
+
     // Get current window's tabs
     const [activeTab] = await browser.tabs.query({
       active: true,
@@ -1136,19 +1201,31 @@ async function periodicCheck() {
 }
 
 // Initialize
-(async () => {
-  const stats = await getStats();
-  await saveStats(stats);
-  console.log("TabCap: Initialized - Auto-close mode");
+// The init promise gates checkInactiveTabs() so alarm/event handlers
+// cannot run the check before tabLastAccessed is restored from storage.
+// CRITICAL: initResolved must be set in `finally` so that a failure in
+// stats/storage never permanently blocks checkInactiveTabs.
+initPromise = (async () => {
+  try {
+    const stats = await getStats();
+    await saveStats(stats);
+    console.log("TabCap: Initialized - Auto-close mode");
 
-  // Restore tab activity tracking from storage
-  await restoreTabActivity();
+    // Restore tab activity tracking from storage
+    await restoreTabActivity();
+  } catch (error) {
+    console.error("TabCap: Init error (continuing anyway):", error);
+  } finally {
+    // Always unblock checkInactiveTabs, even if init partially failed.
+    // A partial tabLastAccessed map is better than permanently blocking.
+    initResolved = true;
+  }
 
   // Setup inactive tab alarm
   await setupInactiveAlarm();
 
   // Run immediate check for tabs that expired while worker was down
-  await checkInactiveTabs();
+  await checkInactiveTabs(true);
 
   // Initialize badge
   await updateBadge();
