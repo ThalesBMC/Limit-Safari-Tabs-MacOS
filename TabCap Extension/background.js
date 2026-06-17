@@ -1047,8 +1047,13 @@ async function setupInactiveAlarm() {
 
   if (settings.inactiveEnabled) {
     // Check every minute (minimum alarm interval)
-    await browser.alarms.create(INACTIVE_ALARM_NAME, { periodInMinutes: 1 });
-    console.log("TabCap: Inactive tab alarm created");
+    try {
+      await browser.alarms.create(INACTIVE_ALARM_NAME, { periodInMinutes: 1 });
+      console.log("TabCap: Inactive tab alarm created");
+    } catch (error) {
+      // Do not abort initialization: the periodic alarm also runs inactive checks.
+      console.error("TabCap: Could not create inactive tab alarm:", error);
+    }
   }
 }
 
