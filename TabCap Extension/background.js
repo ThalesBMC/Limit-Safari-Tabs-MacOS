@@ -89,7 +89,7 @@ async function updateBadge() {
       return;
     }
 
-    const count = await getCurrentTabCount(activeTab.windowId, settings);
+    const count = await getDisplayTabCount(activeTab.windowId, settings);
     const max = settings.maxTabs;
     const ratio = count / max;
 
@@ -372,6 +372,18 @@ async function getGlobalTabCount(settings) {
   return tabs.length;
 }
 
+// Count tabs for display. This includes allowlisted/protected tabs so the UI
+// reflects how many tabs are actually open.
+async function getDisplayTabCount(windowId, settings) {
+  if (settings.globalLimit) {
+    const tabs = await browser.tabs.query({});
+    return tabs.length;
+  }
+
+  const tabs = await browser.tabs.query({ windowId });
+  return tabs.length;
+}
+
 // Get current tab count based on settings (per window or global)
 async function getCurrentTabCount(windowId, settings) {
   if (settings.globalLimit) {
@@ -501,6 +513,7 @@ async function handleTabCreated(tab) {
 
   // Broadcast count update
   const tabCount = await getCurrentTabCount(tab.windowId, settings);
+  const displayTabCount = await getDisplayTabCount(tab.windowId, settings);
   const limitType = settings.globalLimit ? "global" : "window";
 
   console.log(
@@ -508,7 +521,7 @@ async function handleTabCreated(tab) {
   );
 
   browser.runtime
-    .sendMessage({ type: "TAB_COUNT_UPDATED", count: tabCount })
+    .sendMessage({ type: "TAB_COUNT_UPDATED", count: displayTabCount })
     .catch(() => {});
 
   // Update badge
@@ -667,7 +680,7 @@ async function handleTabActivated(activeInfo) {
   checkInactiveTabs().catch(() => {});
 
   try {
-    const count = await getCurrentTabCount(activeInfo.windowId, settings);
+    const count = await getDisplayTabCount(activeInfo.windowId, settings);
     browser.runtime
       .sendMessage({ type: "TAB_COUNT_UPDATED", count })
       .catch(() => {});
@@ -721,7 +734,7 @@ async function broadcastTabCount() {
       currentWindow: true,
     });
     if (activeTab) {
-      const count = await getCurrentTabCount(activeTab.windowId, settings);
+      const count = await getDisplayTabCount(activeTab.windowId, settings);
       browser.runtime
         .sendMessage({ type: "TAB_COUNT_UPDATED", count })
         .catch(() => {});
@@ -1145,7 +1158,7 @@ browser.runtime.onMessage.addListener(async (message) => {
           currentWindow: true,
         });
         if (activeTab) {
-          const count = await getCurrentTabCount(activeTab.windowId, settings);
+          const count = await getDisplayTabCount(activeTab.windowId, settings);
           return { count };
         }
       } catch {}
@@ -1188,7 +1201,7 @@ async function periodicCheck() {
     });
     if (!activeTab) return;
 
-    const currentCount = await getCurrentTabCount(activeTab.windowId, settings);
+    const currentCount = await getDisplayTabCount(activeTab.windowId, settings);
 
     // Broadcast count to popup
     browser.runtime
