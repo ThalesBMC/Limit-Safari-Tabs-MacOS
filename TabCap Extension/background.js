@@ -999,20 +999,20 @@ async function getInactiveTabsInfo() {
   const result = [];
 
   for (const tab of allTabs) {
-    if (tab.active) continue;
-
-    // If pinned tabs are protected, hide them from the list entirely
-    // This prevents duplication (one per window) and reduces noise since they won't be closed anyway
-    if (settings.protectPinned && tab.pinned) continue;
-
-    // Filter out internal pages (Start Page, etc) as they are never closed
-    if (isInternalUrl(tab.url)) continue;
-
     const lastAccessed = tabLastAccessed.get(tab.id) || now;
     let isProtected = false;
     let protectReason = "";
 
-    if (settings.protectAudible && tab.audible) {
+    if (tab.active) {
+      isProtected = true;
+      protectReason = "active";
+    } else if (isInternalUrl(tab.url)) {
+      isProtected = true;
+      protectReason = "system";
+    } else if (settings.protectPinned && tab.pinned) {
+      isProtected = true;
+      protectReason = "pinned";
+    } else if (settings.protectAudible && tab.audible) {
       isProtected = true;
       protectReason = "audible";
     } else if (settings.protectAllowlist && settings.allowlistEnabled && settings.allowlist.length > 0) {

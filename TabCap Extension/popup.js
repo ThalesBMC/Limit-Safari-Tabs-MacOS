@@ -724,7 +724,7 @@ async function updateInactiveTabsList() {
   try {
     const response = await browser.runtime.sendMessage({ type: "GET_INACTIVE_TABS" });
     if (!response || !response.tabs || response.tabs.length === 0) {
-      elements.inactiveTabsList.innerHTML = '<p class="setting-hint">No tracked tabs</p>';
+      elements.inactiveTabsList.innerHTML = '<p class="setting-hint">No open tabs</p>';
       return;
     }
 
